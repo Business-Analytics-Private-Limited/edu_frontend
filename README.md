@@ -41,10 +41,10 @@ Before you push: `pnpm lint && pnpm typecheck && pnpm build`. CI runs the same.
 
 | Folder / file | What it is |
 |---|---|
-| `apps/web/` | Next.js app for institution staff, parents and students. `app/` = pages, `lib/api.ts` = calling the backend |
-| `apps/admin/` | Next.js super admin console |
+| `apps/web/` | Next.js app for institution staff, parents and students. `app/(app)/` = pages after login (with the sidebar), `app/login/` = sign-in, `lib/api.ts` = calling the backend, `lib/bootstrap.ts` + `lib/navigation.tsx` = who is signed in and what the sidebar shows |
+| `apps/admin/` | Next.js super admin console. `app/(console)/` = pages after login, `lib/navigation.tsx` = the console menu |
 | `packages/api/` | The copy of the backend API contract and the TypeScript types generated from it |
-| `packages/ui/` | Shared UI components (Tailwind + shadcn/ui from Phase 2) |
+| `packages/ui/` | The design system: Tailwind theme, components (Button, Card, …) and the app shell |
 | `packages/config/` | Shared TypeScript settings |
 | `docs/` | Frontend guides |
 | `.github/workflows/` | CI |

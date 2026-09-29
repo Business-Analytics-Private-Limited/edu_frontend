@@ -114,7 +114,8 @@
             "authorizationUrl": "http://localhost:8080/realms/tenants/protocol/openid-connect/auth",
             "tokenUrl": "http://localhost:8080/realms/tenants/protocol/openid-connect/token",
             "scopes": {
-              "openid": "OpenID Connect"
+              "openid": "OpenID Connect",
+              "organization": "The organization (tenant) the user belongs to. Required for tenant users."
             }
           }
         }
