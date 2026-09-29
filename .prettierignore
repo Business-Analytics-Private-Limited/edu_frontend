@@ -1,0 +1,9 @@
+pnpm-lock.yaml
+.next/
+.turbo/
+coverage/
+# Written by `pnpm api:sync`; copied from the backend, never edited by hand.
+packages/api/openapi.json
+packages/api/src/generated/
+# Documents are formatted by hand.
+*.md

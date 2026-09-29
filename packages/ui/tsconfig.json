@@ -1,0 +1,10 @@
+{
+  "extends": "@eduplatform/config/tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["DOM", "ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true
+  },
+  "include": ["src"]
+}

@@ -1,0 +1,19 @@
+# Generated: rebuilt by pnpm install / pnpm build / pnpm dev
+node_modules/
+.next/
+.turbo/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Local settings and secrets: never committed (copy .env.example to .env.local in each app)
+.env
+.env.*
+!.env.example
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

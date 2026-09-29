@@ -1,0 +1,417 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "EduPlatform API",
+    "version": "0.1.0",
+    "description": "Generated from packages/contracts/openapi. Conventions: docs/08-api-conventions.md. Module guides: docs/modules/."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Local development"
+    }
+  ],
+  "security": [
+    {
+      "keycloak": [
+        "openid"
+      ]
+    }
+  ],
+  "tags": [
+    {
+      "name": "system",
+      "description": "Health checks"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "system.health.live",
+        "summary": "Liveness",
+        "description": "Returns 200 while the process is running. Used by container orchestration.",
+        "tags": [
+          "system"
+        ],
+        "security": [],
+        "x-module": "system",
+        "x-permission": "public",
+        "x-audit": false,
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The process is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                },
+                "example": {
+                  "data": {
+                    "status": "ok"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "system.health.ready",
+        "summary": "Readiness",
+        "description": "Returns 200 when the API can reach its database; 503 otherwise.",
+        "tags": [
+          "system"
+        ],
+        "security": [],
+        "x-module": "system",
+        "x-permission": "public",
+        "x-audit": false,
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ready to serve traffic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                },
+                "example": {
+                  "data": {
+                    "status": "ok",
+                    "checks": {
+                      "database": "ok"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "keycloak": {
+        "type": "oauth2",
+        "description": "Keycloak realm `tenants` (tenant users) or `platform` (super admin endpoints under /admin). Browsers never hold the token; the Next.js server adds it. In Postman, use \"Get New Access Token\".\n",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "http://localhost:8080/realms/tenants/protocol/openid-connect/auth",
+            "tokenUrl": "http://localhost:8080/realms/tenants/protocol/openid-connect/token",
+            "scopes": {
+              "openid": "OpenID Connect"
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "RequestId": {
+        "name": "X-Request-Id",
+        "in": "header",
+        "required": false,
+        "description": "Correlates logs and audit entries. Generated if absent and always returned.",
+        "schema": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9-]{8,64}$"
+        },
+        "example": "0192a5f4-7c1e-7b3a-9d2e-1f4b5c6d7e8f"
+      },
+      "InstitutionId": {
+        "name": "X-Institution-Id",
+        "in": "header",
+        "required": false,
+        "description": "Active institution for users who belong to several.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": false,
+        "description": "Repeating a request with the same key within 24 hours returns the first result.",
+        "schema": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "IfMatch": {
+        "name": "If-Match",
+        "in": "header",
+        "required": true,
+        "description": "The version from the resource's ETag. A stale version returns 409 version_conflict.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "\"3\""
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "default": 25
+        }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "description": "The `page.nextCursor` value from the previous page.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "schemas": {
+      "Uuid": {
+        "type": "string",
+        "format": "uuid",
+        "description": "UUIDv7",
+        "example": "0192a5f4-7c1e-7b3a-9d2e-1f4b5c6d7e8f"
+      },
+      "PageInfo": {
+        "type": "object",
+        "required": [
+          "limit",
+          "hasMore"
+        ],
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "example": 25
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "eyJpZCI6IjAxOTJhNWY0In0"
+          },
+          "hasMore": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "FieldError": {
+        "type": "object",
+        "required": [
+          "path",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "example": "dateOfBirth"
+          },
+          "code": {
+            "type": "string",
+            "example": "invalid_date"
+          },
+          "message": {
+            "type": "string",
+            "example": "Must be a valid date"
+          }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "description": "RFC 9457 problem details with a stable `code`.",
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "https://docs.eduplatform.local/errors/validation_failed"
+          },
+          "title": {
+            "type": "string",
+            "example": "Validation failed"
+          },
+          "status": {
+            "type": "integer",
+            "example": 422
+          },
+          "code": {
+            "type": "string",
+            "example": "validation_failed",
+            "enum": [
+              "bad_request",
+              "unauthenticated",
+              "module_not_enabled",
+              "permission_denied",
+              "not_found",
+              "version_conflict",
+              "conflict",
+              "validation_failed",
+              "limit_reached",
+              "rate_limited",
+              "service_unavailable",
+              "internal_error"
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "example": "1 field(s) are invalid"
+          },
+          "requestId": {
+            "type": "string",
+            "example": "0192a5f4-7c1e-7b3a-9d2e-1f4b5c6d7e8f"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldError"
+            },
+            "example": [
+              {
+                "path": "dateOfBirth",
+                "code": "invalid_date",
+                "message": "Must be a valid date"
+              }
+            ]
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ok"
+                ]
+              },
+              "checks": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string",
+                  "enum": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Malformed request",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "Unauthenticated": {
+        "description": "Missing, expired or invalid token",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Module not enabled (`module_not_enabled`) or permission missing (`permission_denied`)",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Not found, or outside the caller's scope",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Unique rule violated or stale version",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "ValidationFailed": {
+        "description": "Body fails the schema or a business rule",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Too many requests",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "A dependency is not available",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
+    }
+  }
+}
