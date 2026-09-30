@@ -15,13 +15,13 @@ import {
   PageHeader,
 } from '@eduplatform/ui';
 import { api } from '../../../lib/api';
-import { can, getMe } from '../../../lib/me';
+import { canAt, getMe } from '../../../lib/me';
 import type { OwnOrganization } from '../../../lib/types';
 import { updateOrganization } from './actions';
 
 export default async function OrganizationPage() {
   const [me, org] = await Promise.all([getMe(), api<OwnOrganization>('/organization')]);
-  const canEdit = can(me, 'platform.organization.update');
+  const canEdit = canAt(me, 'platform.organization.update', {});
 
   return (
     <>

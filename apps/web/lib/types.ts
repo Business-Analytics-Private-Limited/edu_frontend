@@ -15,8 +15,24 @@ export interface Me {
   email: string;
   organizationId: string | null;
   roleNames: string[];
+  /** Everything the user may do somewhere; `grants` says where. */
   permissions: string[];
+  grants: Grant[];
   enabledModules: string[];
+}
+
+/** One role of the user and where it applies (no ids = the whole organization). */
+export interface Grant {
+  roleName: string;
+  permissions: string[];
+  institutionId: string | null;
+  campusId: string | null;
+}
+
+/** A place in the organization: {} = the whole organization. */
+export interface Place {
+  institutionId?: string | null;
+  campusId?: string | null;
 }
 
 export interface Dashboard {
@@ -58,10 +74,12 @@ export interface Institution {
   name: string;
   code: string;
   type: InstitutionType;
+  /** Only the campuses the user may see. */
+  campuses: { id: string; name: string; code: string }[];
   _count: { campuses: number };
 }
 
-export interface InstitutionDetail extends Omit<Institution, '_count'> {
+export interface InstitutionDetail extends Omit<Institution, '_count' | 'campuses'> {
   campuses: Campus[];
 }
 
@@ -74,7 +92,15 @@ export interface User {
   status: UserStatus;
   lastLoginAt: string | null;
   createdAt: string;
-  roles: { id: string; name: string }[];
+  /** Each role with its place: neither institution nor campus = the whole organization. */
+  roles: RoleAssignment[];
+}
+
+export interface RoleAssignment {
+  id: string;
+  role: { id: string; name: string };
+  institution: { id: string; name: string } | null;
+  campus: { id: string; name: string } | null;
 }
 
 export interface Role {
@@ -93,6 +119,9 @@ export interface AuditLog {
   id: string;
   actorType: string;
   actorId: string;
+  actorName: string | null;
+  institutionId: string | null;
+  campusId: string | null;
   action: string;
   entity: string;
   entityId: string | null;

@@ -1,10 +1,12 @@
 /**
- * /audit: who changed what in the organization, newest first.
+ * /audit: who changed what, where, and when; newest first.
+ * Organization-wide admins see everything; a Principal / Campus admin sees only the changes in
+ * their own institution / campus (the API filters it).
  */
 import { PageHeader, Table, TableHead, Td, Th } from '@eduplatform/ui';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
-import type { AuditLog, Page } from '../../../lib/types';
+import type { AuditLog, Institution, Page } from '../../../lib/types';
 
 export default async function AuditPage({
   searchParams,
@@ -12,7 +14,22 @@ export default async function AuditPage({
   searchParams: Promise<{ page?: string }>;
 }) {
   const { page = '1' } = await searchParams;
-  const result = await api<Page<AuditLog>>(`/audit-logs?page=${Number(page) || 1}&pageSize=50`);
+  const [result, institutions] = await Promise.all([
+    api<Page<AuditLog>>(`/audit-logs?page=${Number(page) || 1}&pageSize=50`),
+    api<Institution[]>('/institutions').catch(() => [] as Institution[]),
+  ]);
+
+  // Names for the "Where" column, from the institutions and campuses the user may see.
+  const names = new Map<string, string>();
+  for (const institution of institutions) {
+    names.set(institution.id, institution.name);
+    for (const campus of institution.campuses) names.set(campus.id, campus.name);
+  }
+  const where = (log: AuditLog) => {
+    if (log.campusId) return names.get(log.campusId) ?? 'A campus';
+    if (log.institutionId) return names.get(log.institutionId) ?? 'An institution';
+    return 'Whole organization';
+  };
   const pages = Math.max(1, Math.ceil(result.total / result.pageSize));
 
   return (
@@ -23,6 +40,7 @@ export default async function AuditPage({
           <tr>
             <Th>When</Th>
             <Th>Who</Th>
+            <Th>Where</Th>
             <Th>Action</Th>
             <Th>What</Th>
             <Th>Details</Th>
@@ -34,9 +52,12 @@ export default async function AuditPage({
               <Td className="whitespace-nowrap text-muted-foreground">
                 {new Date(log.createdAt).toLocaleString()}
               </Td>
-              <Td className="text-xs">
-                {log.actorType === 'super_admin' ? 'EduPlatform staff' : log.actorId}
+              <Td>
+                {log.actorType === 'super_admin'
+                  ? `EduPlatform (${log.actorName ?? 'staff'})`
+                  : (log.actorName ?? 'Unknown')}
               </Td>
+              <Td className="text-muted-foreground">{where(log)}</Td>
               <Td>{log.action}</Td>
               <Td>{log.entity}</Td>
               <Td className="max-w-md truncate font-mono text-xs">
@@ -46,7 +67,7 @@ export default async function AuditPage({
           ))}
           {result.items.length === 0 && (
             <tr>
-              <Td colSpan={5} className="py-8 text-center text-muted-foreground">
+              <Td colSpan={6} className="py-8 text-center text-muted-foreground">
                 Nothing yet.
               </Td>
             </tr>

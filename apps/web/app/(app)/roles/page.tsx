@@ -8,7 +8,7 @@
 import { Badge, Button, PageHeader, Table, TableHead, Td, Th } from '@eduplatform/ui';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
-import { can, getMe } from '../../../lib/me';
+import { canAt, getMe } from '../../../lib/me';
 import type { Role } from '../../../lib/types';
 
 export default async function RolesPage() {
@@ -20,7 +20,7 @@ export default async function RolesPage() {
         title="Roles"
         description="What each kind of user may do. A user can have several roles."
         actions={
-          can(me, 'access.role.create') && (
+          canAt(me, 'access.role.create', {}) && (
             <Button asChild>
               <Link href="/roles/new">New role</Link>
             </Button>

@@ -5,7 +5,7 @@
  */
 import { ActionForm, PageHeader, PermissionGrid } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
-import { can, getMe } from '../../../../lib/me';
+import { canAt, getMe } from '../../../../lib/me';
 import type { PermissionResource, Role } from '../../../../lib/types';
 import { deleteRole, updateRole } from '../actions';
 import { RoleFields } from '../role-fields';
@@ -18,8 +18,9 @@ export default async function RolePage({ params }: { params: Promise<{ id: strin
     api<PermissionResource[]>('/permissions'),
   ]);
   const hasMore = role.permissions.some((p) => !me.permissions.includes(p));
-  const canEdit = !role.predefined && can(me, 'access.role.update') && !hasMore;
-  const canDelete = !role.predefined && can(me, 'access.role.delete');
+  // Roles are shared by the whole organization: changing them needs the permission there.
+  const canEdit = !role.predefined && canAt(me, 'access.role.update', {}) && !hasMore;
+  const canDelete = !role.predefined && canAt(me, 'access.role.delete', {});
 
   if (!canEdit) {
     return (

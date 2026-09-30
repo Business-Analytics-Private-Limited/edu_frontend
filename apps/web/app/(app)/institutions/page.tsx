@@ -19,7 +19,7 @@ import {
 } from '@eduplatform/ui';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
-import { can, getMe } from '../../../lib/me';
+import { canAt, getMe } from '../../../lib/me';
 import { INSTITUTION_TYPES, type Institution } from '../../../lib/types';
 import { createInstitution } from './actions';
 
@@ -68,7 +68,7 @@ export default async function InstitutionsPage() {
           </Table>
         </div>
 
-        {can(me, 'platform.institution.create') && (
+        {canAt(me, 'platform.institution.create', {}) && (
           <Card>
             <CardHeader>
               <CardTitle>Add institution</CardTitle>

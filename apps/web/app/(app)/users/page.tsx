@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { api } from '../../../lib/api';
 import { can, getMe } from '../../../lib/me';
 import type { Page, User } from '../../../lib/types';
+import { placeLabel } from './place';
 
 export default async function UsersPage({
   searchParams,
@@ -83,7 +84,7 @@ export default async function UsersPage({
                 </Link>
               </Td>
               <Td>{user.email}</Td>
-              <Td>{user.roles.map((r) => r.name).join(', ')}</Td>
+              <Td>{user.roles.map((r) => `${r.role.name} · ${placeLabel(r)}`).join(', ')}</Td>
               <Td>
                 <Badge variant={user.status === 'ACTIVE' ? 'success' : 'outline'}>
                   {user.status}

@@ -1,7 +1,8 @@
 /**
  * /institutions/:id: one institution and its campuses.
- * Each button needs its own permission: platform.institution.update / .delete and
- * platform.campus.create / .update / .delete.
+ * Each button needs its own permission AT THIS PLACE: platform.institution.update / .delete for
+ * the institution, platform.campus.create / .update / .delete for campuses. A Campus admin sees
+ * only their own campus here (the API sends only the campuses they may see).
  */
 import {
   ActionForm,
@@ -19,7 +20,7 @@ import {
   Th,
 } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
-import { can, getMe } from '../../../../lib/me';
+import { canAt, getMe } from '../../../../lib/me';
 import { INSTITUTION_TYPES, type InstitutionDetail } from '../../../../lib/types';
 import {
   createCampus,
@@ -35,11 +36,12 @@ export default async function InstitutionPage({ params }: { params: Promise<{ id
     getMe(),
     api<InstitutionDetail>(`/institutions/${id}`),
   ]);
-  const canEdit = can(me, 'platform.institution.update');
-  const canDelete = can(me, 'platform.institution.delete');
-  const canAddCampus = can(me, 'platform.campus.create');
-  const canRenameCampus = can(me, 'platform.campus.update');
-  const canDeleteCampus = can(me, 'platform.campus.delete');
+  const here = { institutionId: institution.id };
+  const atCampus = (campusId: string) => ({ institutionId: institution.id, campusId });
+  const canEdit = canAt(me, 'platform.institution.update', here);
+  const canDelete = canAt(me, 'platform.institution.delete', here);
+  const canAddCampus = canAt(me, 'platform.campus.create', here);
+  const canDeleteCampus = canAt(me, 'platform.campus.delete', here);
 
   return (
     <>
@@ -75,7 +77,7 @@ export default async function InstitutionPage({ params }: { params: Promise<{ id
               {institution.campuses.map((campus) => (
                 <tr key={campus.id}>
                   <Td>
-                    {canRenameCampus ? (
+                    {canAt(me, 'platform.campus.update', atCampus(campus.id)) ? (
                       <ActionForm
                         action={renameCampus.bind(null, institution.id, campus.id)}
                         submitLabel="Rename"
