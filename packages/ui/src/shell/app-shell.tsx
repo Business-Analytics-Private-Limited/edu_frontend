@@ -3,8 +3,8 @@
  * The page frame of both apps: a dark sidebar with navigation on the left, a header on top,
  * and the page content. On small screens the sidebar becomes a slide-in menu.
  *
- * The apps decide WHAT is in the sidebar (from the user's modules and permissions, see
- * apps/web/lib/navigation.ts); this component only decides how it looks.
+ * The apps decide WHAT is in the sidebar (the web app shows only what the user's permissions
+ * allow, see apps/web/app/(app)/layout.tsx); this component only decides how it looks.
  *
  *   <AppShell
  *     brand={{ name: 'EduPlatform', subtitle: 'Sri Vidya Junior College' }}

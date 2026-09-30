@@ -5,6 +5,8 @@
 export { cn } from './lib/cn';
 
 // Building blocks
+export { ActionForm, type ActionFormProps, type FormState } from './components/action-form';
+export { Alert } from './components/alert';
 export { Badge, type BadgeProps } from './components/badge';
 export { Button, buttonVariants, type ButtonProps } from './components/button';
 export {
@@ -16,7 +18,8 @@ export {
   CardTitle,
 } from './components/card';
 export { EmptyState, type EmptyStateProps } from './components/empty-state';
-export { Input, Label } from './components/form';
+export { Checkbox, Field, Input, Label, Select } from './components/form';
+export { Table, TableHead, Td, Th } from './components/table';
 
 // Page frame
 export { AppShell, type AppShellProps, type NavItem, type NavSection } from './shell/app-shell';

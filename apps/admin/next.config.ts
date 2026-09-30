@@ -1,13 +1,13 @@
 /**
- * Next.js settings for the super admin console. Stricter than the web app: never indexed by
- * search engines, never embedded, no referrer sent.
+ * Next.js settings for the super admin console: never indexed by search engines, never shown
+ * inside another site, no referrer sent.
  */
 import type { NextConfig } from 'next';
 
 const config: NextConfig = {
   poweredByHeader: false,
-  // Workspace packages are TypeScript source; Next.js compiles them with the app.
-  transpilePackages: ['@eduplatform/ui', '@eduplatform/api'],
+  // The ui package is TypeScript source; Next.js compiles it with the app.
+  transpilePackages: ['@eduplatform/ui'],
   async headers() {
     return [
       {

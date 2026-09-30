@@ -1,26 +1,28 @@
 # EduPlatform frontend (working name)
 
-The web app and super admin console of EduPlatform, a multi-tenant management platform for educational institutions.
+The two websites of EduPlatform, a platform for schools and colleges. The backend (API, database, design documents) lives in the separate **eduplatform-backend** repository. The frontend talks to it only via HTTP: `http://localhost:3000/api/v1`, documented in Swagger at http://localhost:3000/api/docs.
 
-This repository contains **only frontend code**. The backend (services, API, database, product design documents) lives in the separate **eduplatform-backend** repository. The two are linked by exactly one thing: the **API contract** (`packages/api/openapi.json`).
+| App | URL | Who logs in | What they do |
+|---|---|---|---|
+| **Super admin console** (`apps/admin`) | http://localhost:3003 | EduPlatform staff | Create organizations and their first admin, switch modules on/off, suspend organizations |
+| **Web app** (`apps/web`) | http://localhost:3001 | An organization's staff | Institutions and campuses, users, roles and permissions, audit log, change password |
 
 ## Getting started (Windows)
 
-Prerequisites: Node.js 24 LTS (see `.nvmrc`), pnpm 10 (`corepack enable` in an administrator terminal).
+Prerequisites: Node.js 22 or newer, and the backend running (see its README).
 
 ```sh
-pnpm install
-copy .env.example apps\web\.env.local     # where the backend API runs
+npx pnpm@10.12.1 install                      # ONE install for both apps (one node_modules at the top)
+copy .env.example apps\web\.env.local
 copy .env.example apps\admin\.env.local
-pnpm dev                                  # starts both apps
+npx pnpm@10.12.1 dev                          # starts both apps
 ```
 
-| URL | App |
-|---|---|
-| http://localhost:3001 | Web app (institution staff, parents, students) |
-| http://localhost:3003 | Super admin console |
+Try it:
 
-The apps show data only when the backend is running (ask the backend team, or run it from its repository). Without it, pages still open and say the API is not reachable.
+1. Open http://localhost:3003 and log in as the super admin (the `SEED_SUPER_ADMIN_...` values in the backend's `.env`).
+2. **Organizations → New organization**: fill in the organization and its first admin.
+3. Open http://localhost:3001 and log in with that admin's email and password.
 
 ## Commands
 
@@ -28,35 +30,66 @@ The apps show data only when the backend is running (ask the backend team, or ru
 |---|---|
 | `pnpm dev` | Both apps in watch mode |
 | `pnpm dev:web` / `pnpm dev:admin` | One app |
-| `pnpm build` | Production build |
+| `pnpm build` | Production build of both apps |
 | `pnpm lint` | Code rules |
-| `pnpm typecheck` | TypeScript errors, including API mismatches after a sync |
+| `pnpm typecheck` | TypeScript errors |
 | `pnpm format` | Formats all code |
-| `pnpm api:sync` | Copies the latest API contract from the backend and regenerates the types ([details](docs/working-with-the-api.md)) |
-| `pnpm api:check` | Checks the generated types match the contract (run in CI) |
 
 Before you push: `pnpm lint && pnpm typecheck && pnpm build`. CI runs the same.
+
+## How a page works (read this first)
+
+Every page follows the same pattern. Take **Institutions** (`apps/web/app/(app)/institutions/`):
+
+| File | Runs on | What it does |
+|---|---|---|
+| `page.tsx` | server | Loads data with `api('/institutions')` and renders the table and the "Add institution" form |
+| `actions.ts` | server | `createInstitution(...)`: what happens when the form is sent. Calls the API, returns `{ error }` or `{ success }` |
+| `[id]/page.tsx` | server | One institution: `/institutions/<id>` |
+
+The flow when a user adds an institution:
+
+```
+browser form ──> actions.ts createInstitution() ──> POST /api/v1/institutions (with the user's token)
+                        │                                     │
+                        │ <── { error: "code already used" } ─┘ (shown above the form)
+                        └── revalidatePath('/institutions') ──> page.tsx loads the list again
+```
+
+The shared pieces:
+
+| File | What it does |
+|---|---|
+| `lib/api.ts` | `api(path, { method, body })`: calls the backend with the login token. Session ended → login page; no permission → "No access" page |
+| `lib/session.ts` | The login token, kept in an **httpOnly cookie** (browser JavaScript can't read it) |
+| `middleware.ts` | Runs before every page: no login cookie → `/login` |
+| `app/login/` | Login page + `actions.ts` that calls `/auth/login` and stores the token |
+| `app/logout/route.ts` | Clears the cookie, goes to `/login` |
+| `app/(app)/layout.tsx` (web) / `app/(console)/layout.tsx` (admin) | The sidebar menu and header around every page after login |
+| `lib/me.ts` (web) | `getMe()` = who is logged in; `can(me, 'access.user.manage')` = may they do this? Used to hide menu items and buttons |
+| `packages/ui` | Buttons, cards, tables, form fields, `ActionForm` (every form) and the page frame |
+
+**Hiding a button is not security.** The backend checks every permission again; the frontend only hides what the user can't use.
+
+## Adding a page
+
+1. Find the endpoint in Swagger (http://localhost:3000/api/docs) and add the response type to `lib/types.ts`.
+2. Create `app/(app)/<name>/page.tsx` that calls `api<YourType>('/<endpoint>')`.
+3. For forms: add a server action to `app/(app)/<name>/actions.ts` and use `<ActionForm action={...}>`.
+4. Add the menu item in `app/(app)/layout.tsx` with the permission it needs.
+5. `pnpm lint && pnpm typecheck && pnpm build`.
 
 ## Folders
 
 | Folder / file | What it is |
 |---|---|
-| `apps/web/` | Next.js app for institution staff, parents and students. `app/(app)/` = pages after login (with the sidebar), `app/login/` = sign-in, `lib/api.ts` = calling the backend, `lib/bootstrap.ts` + `lib/navigation.tsx` = who is signed in and what the sidebar shows |
-| `apps/admin/` | Next.js super admin console. `app/(console)/` = pages after login, `lib/navigation.tsx` = the console menu |
-| `packages/api/` | The copy of the backend API contract and the TypeScript types generated from it |
-| `packages/ui/` | The design system: Tailwind theme, components (Button, Card, …) and the app shell |
-| `packages/config/` | Shared TypeScript settings |
-| `docs/` | Frontend guides |
+| `apps/web/` | Web app for an organization's staff |
+| `apps/admin/` | Super admin console |
+| `packages/ui/` | Shared components and styles (Tailwind) |
 | `.github/workflows/` | CI |
-| `package.json`, `pnpm-workspace.yaml`, `turbo.json` | Commands, packages, task runner |
+| `package.json`, `pnpm-workspace.yaml` | Commands and the list of apps/packages |
 | `eslint.config.mjs`, `.prettierrc.json`, `.editorconfig` | Code rules and formatting |
 | `.env.example` | Template for each app's `.env.local` |
 | `CLAUDE.md` | The working agreement: rules for this repository |
 
-Generated folders, never edited or committed: `node_modules/`, `.next/`, `.turbo/`.
-
-## Learning the API
-
-- **Swagger UI:** http://localhost:3000/api/docs while the backend runs.
-- **Postman:** the collection from the backend team.
-- **Types:** `@eduplatform/api` in your editor; hover a response to see its fields.
+Generated folders, never edited or committed: `node_modules/`, `.next/`.

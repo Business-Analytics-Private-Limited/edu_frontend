@@ -1,13 +1,22 @@
 /**
- * Login page for platform staff. Uses Keycloak's `platform` realm, which requires a one-time
- * password (MFA). Connected to Keycloak in the next Phase 2 step.
+ * /login: the super admin login page.
  */
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@eduplatform/ui';
+import {
+  ActionForm,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Field,
+  Input,
+} from '@eduplatform/ui';
 import { ShieldCheck } from 'lucide-react';
+import { login } from './actions';
 
 export const metadata = { title: 'Sign in' };
 
-export default function AdminLoginPage() {
+export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-sidebar px-4">
       <Card className="w-full max-w-sm">
@@ -16,15 +25,35 @@ export default function AdminLoginPage() {
             <ShieldCheck />
           </div>
           <CardTitle className="text-xl">Super admin console</CardTitle>
-          <CardDescription>
-            For EduPlatform staff only. Sign-in requires a one-time password.
-          </CardDescription>
+          <CardDescription>For EduPlatform staff only.</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Connected to Keycloak (platform realm) in the next step. */}
-          <Button size="lg" className="w-full" disabled>
-            Sign in
-          </Button>
+          <ActionForm
+            action={login}
+            submitLabel="Sign in"
+            pendingLabel="Signing in…"
+            submitSize="lg"
+          >
+            <Field label="Email" htmlFor="email">
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="username"
+                required
+                autoFocus
+              />
+            </Field>
+            <Field label="Password" htmlFor="password">
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+              />
+            </Field>
+          </ActionForm>
         </CardContent>
       </Card>
     </main>

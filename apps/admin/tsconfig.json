@@ -1,5 +1,27 @@
 {
-  "extends": "@eduplatform/config/tsconfig.next.json",
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["DOM", "DOM.Iterable", "ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "preserve",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "allowJs": true
+  },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
 }

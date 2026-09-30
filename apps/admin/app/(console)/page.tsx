@@ -1,57 +1,97 @@
 /**
- * Console overview: what platform staff can do here, and when each screen arrives.
+ * / : the super admin dashboard. Numbers across all organizations, and the newest ones.
  */
 import {
   Badge,
+  Button,
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
   PageHeader,
+  Table,
+  TableHead,
+  Td,
+  Th,
 } from '@eduplatform/ui';
+import Link from 'next/link';
+import { api } from '../../lib/api';
+import type { Dashboard } from '../../lib/types';
 
-/** The v1 console screens (docs/05-module-catalog.md §5.7) and their roadmap phase. */
-const SCREENS = [
-  { name: 'Organizations', purpose: 'Onboard, suspend and reactivate tenants', phase: 'Phase 2' },
-  {
-    name: 'Entitlements',
-    purpose: 'Which modules and variants each tenant may use',
-    phase: 'Phase 2',
-  },
-  { name: 'Plans', purpose: 'Module bundles such as Starter or Standard', phase: 'Phase 2' },
-  { name: 'Feature flags', purpose: 'Gradual rollout of new features', phase: 'Phase 2' },
-  { name: 'Role templates', purpose: 'The default roles new tenants receive', phase: 'Phase 2' },
-  {
-    name: 'Impersonation',
-    purpose: 'Support access with a reason, time-limited and audited',
-    phase: 'Phase 2',
-  },
-  { name: 'Usage', purpose: 'Students, users and storage per tenant', phase: 'Phase 2' },
-  { name: 'Devices', purpose: 'Biometric devices across tenants', phase: 'Phase 5' },
-];
+export default async function DashboardPage() {
+  const data = await api<Dashboard>('/super-admin/dashboard');
 
-export default function OverviewPage() {
+  const numbers = [
+    { label: 'Organizations', value: data.organizations.total },
+    { label: 'Active', value: data.organizations.active },
+    { label: 'Suspended', value: data.organizations.suspended },
+    { label: 'Institutions', value: data.institutions },
+    { label: 'Users', value: data.users },
+  ];
+
   return (
     <>
       <PageHeader
-        title="Super admin console"
-        description="Manage organizations, their modules and the platform. All actions are audited."
+        title="Dashboard"
+        description="All organizations using EduPlatform"
+        actions={
+          <Button asChild>
+            <Link href="/organizations/new">New organization</Link>
+          </Button>
+        }
       />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {SCREENS.map((screen) => (
-          <Card key={screen.name}>
-            <CardHeader>
-              <div className="flex items-start justify-between gap-2">
-                <CardTitle>{screen.name}</CardTitle>
-                <Badge variant="outline">{screen.phase}</Badge>
-              </div>
-              <CardDescription>{screen.purpose}</CardDescription>
+
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+        {numbers.map((item) => (
+          <Card key={item.label}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {item.label}
+              </CardTitle>
             </CardHeader>
-            <CardContent />
+            <CardContent className="text-3xl font-semibold">{item.value}</CardContent>
           </Card>
         ))}
       </div>
+
+      <h2 className="mb-3 mt-8 text-lg font-semibold">Newest organizations</h2>
+      {data.recentOrganizations.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No organizations yet. Create the first one.</p>
+      ) : (
+        <Table>
+          <TableHead>
+            <tr>
+              <Th>Name</Th>
+              <Th>Slug</Th>
+              <Th>Status</Th>
+              <Th>Created</Th>
+            </tr>
+          </TableHead>
+          <tbody>
+            {data.recentOrganizations.map((org) => (
+              <tr key={org.id}>
+                <Td>
+                  <Link
+                    href={`/organizations/${org.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {org.name}
+                  </Link>
+                </Td>
+                <Td className="text-muted-foreground">{org.slug}</Td>
+                <Td>
+                  <Badge variant={org.status === 'ACTIVE' ? 'success' : 'destructive'}>
+                    {org.status}
+                  </Badge>
+                </Td>
+                <Td className="text-muted-foreground">
+                  {new Date(org.createdAt).toLocaleDateString('en-IN')}
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
     </>
   );
 }

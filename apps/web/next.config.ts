@@ -5,8 +5,8 @@ import type { NextConfig } from 'next';
 
 const config: NextConfig = {
   poweredByHeader: false,
-  // Workspace packages are TypeScript source; Next.js compiles them with the app.
-  transpilePackages: ['@eduplatform/ui', '@eduplatform/api'],
+  // The ui package is TypeScript source; Next.js compiles it with the app.
+  transpilePackages: ['@eduplatform/ui'],
   async headers() {
     return [
       {

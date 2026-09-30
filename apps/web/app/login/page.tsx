@@ -1,34 +1,60 @@
 /**
- * Login page. The "Sign in" button starts Keycloak login (connected in the next Phase 2
- * step); passwords are never typed into this app, only into Keycloak's own page.
+ * /login: login page for an organization's staff (admins, office staff, teachers).
+ * EduPlatform's own staff use the super admin console instead (a different app).
  */
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@eduplatform/ui';
-import { LogIn } from 'lucide-react';
+import {
+  ActionForm,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Field,
+  Input,
+} from '@eduplatform/ui';
+import { GraduationCap } from 'lucide-react';
+import { login } from './actions';
 
 export const metadata = { title: 'Sign in' };
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-sidebar px-4">
+    <main className="flex min-h-screen items-center justify-center bg-muted px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary text-lg font-bold text-primary-foreground">
-            E
+          <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground [&_svg]:size-6">
+            <GraduationCap />
           </div>
           <CardTitle className="text-xl">Sign in to EduPlatform</CardTitle>
-          <CardDescription>
-            Staff, parents and students sign in with the account from their institution.
-          </CardDescription>
+          <CardDescription>For staff of schools and colleges.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {/* Connected to Keycloak (GET /auth/login) in the next step. */}
-          <Button size="lg" className="w-full" disabled>
-            <LogIn />
-            Sign in
-          </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            Forgot your password? Use “Forgot password” on the sign-in page.
-          </p>
+        <CardContent>
+          <ActionForm
+            action={login}
+            submitLabel="Sign in"
+            pendingLabel="Signing in…"
+            submitSize="lg"
+          >
+            <Field label="Email" htmlFor="email">
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="username"
+                required
+                autoFocus
+              />
+            </Field>
+            <Field label="Password" htmlFor="password">
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+              />
+            </Field>
+          </ActionForm>
         </CardContent>
       </Card>
     </main>
