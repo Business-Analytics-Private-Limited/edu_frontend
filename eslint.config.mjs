@@ -1,4 +1,4 @@
-// Code rules for the whole frontend repository (`pnpm lint`).
+// Code rules for the whole frontend repository (`npm run lint`).
 import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';

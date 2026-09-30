@@ -14,8 +14,8 @@ This is the **frontend** repository of EduPlatform: the web app (`apps/web`, an 
 
 ## Stack
 
-Next.js 15 (App Router, server actions) + React 19 + TypeScript (strict), Tailwind CSS 4, pnpm workspace (one `node_modules`). Node.js 22+.
+Next.js 15 (App Router, server actions) + React 19 + TypeScript (strict), Tailwind CSS 4, npm workspaces (one `node_modules`). Node.js 22+.
 
 ## Code style
 
-A short comment at the top of each file saying what it is for, comments that explain *why*, small components. Before pushing: `pnpm lint && pnpm typecheck && pnpm build`.
+A short comment at the top of each file saying what it is for, comments that explain *why*, small components. Before pushing: `npm run lint && npm run typecheck && npm run build`.

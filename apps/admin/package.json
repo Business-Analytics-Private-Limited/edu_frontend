@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@eduplatform/ui": "workspace:*",
+    "@eduplatform/ui": "*",
     "lucide-react": "^1.48.0",
     "next": "^15.5.2",
     "react": "^19.3.0",

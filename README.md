@@ -12,10 +12,10 @@ The two websites of EduPlatform, a platform for schools and colleges. The backen
 Prerequisites: Node.js 22 or newer, and the backend running (see its README).
 
 ```sh
-npx pnpm@10.12.1 install                      # ONE install for both apps (one node_modules at the top)
+npm install  # ONE install for both apps (one node_modules at the top)
 copy .env.example apps\web\.env.local
 copy .env.example apps\admin\.env.local
-npx pnpm@10.12.1 dev                          # starts both apps
+npm run dev  # starts both apps
 ```
 
 Try it:
@@ -28,14 +28,14 @@ Try it:
 
 | Command | What it does |
 |---|---|
-| `pnpm dev` | Both apps in watch mode |
-| `pnpm dev:web` / `pnpm dev:admin` | One app |
-| `pnpm build` | Production build of both apps |
-| `pnpm lint` | Code rules |
-| `pnpm typecheck` | TypeScript errors |
-| `pnpm format` | Formats all code |
+| `npm run dev` | Both apps in watch mode |
+| `npm run dev:web` / `npm run dev:admin` | One app |
+| `npm run build` | Production build of both apps |
+| `npm run lint` | Code rules |
+| `npm run typecheck` | TypeScript errors |
+| `npm run format` | Formats all code |
 
-Before you push: `pnpm lint && pnpm typecheck && pnpm build`. CI runs the same.
+Before you push: `npm run lint && npm run typecheck && npm run build`. CI runs the same.
 
 ## How a page works (read this first)
 
@@ -77,7 +77,7 @@ The shared pieces:
 2. Create `app/(app)/<name>/page.tsx` that calls `api<YourType>('/<endpoint>')`.
 3. For forms: add a server action to `app/(app)/<name>/actions.ts` and use `<ActionForm action={...}>`.
 4. Add the menu item in `app/(app)/layout.tsx` with the permission it needs.
-5. `pnpm lint && pnpm typecheck && pnpm build`.
+5. `npm run lint && npm run typecheck && npm run build`.
 
 ## Folders
 
@@ -87,7 +87,7 @@ The shared pieces:
 | `apps/admin/` | Super admin console |
 | `packages/ui/` | Shared components and styles (Tailwind) |
 | `.github/workflows/` | CI |
-| `package.json`, `pnpm-workspace.yaml` | Commands and the list of apps/packages |
+| `package.json` | Commands, and the list of apps/packages (`workspaces`) |
 | `eslint.config.mjs`, `.prettierrc.json`, `.editorconfig` | Code rules and formatting |
 | `.env.example` | Template for each app's `.env.local` |
 | `CLAUDE.md` | The working agreement: rules for this repository |

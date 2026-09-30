@@ -1,4 +1,4 @@
-# Generated: rebuilt by pnpm install / pnpm build / pnpm dev
+# Generated: rebuilt by npm install / npm run build / npm run dev
 node_modules/
 .next/
 .turbo/

@@ -1,4 +1,4 @@
-pnpm-lock.yaml
+package-lock.json
 .next/
 coverage/
 # Documents are formatted by hand.

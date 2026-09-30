@@ -1,8 +1,0 @@
-# The folders of this repository:
-packages:
-  - apps/* # web (institutions) and admin (super admin console), both Next.js
-  - packages/* # ui: buttons, cards, tables and the page layout shared by both apps
-
-# pnpm 10 blocks dependency install scripts unless listed here.
-onlyBuiltDependencies:
-  - sharp

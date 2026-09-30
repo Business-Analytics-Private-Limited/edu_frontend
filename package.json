@@ -2,22 +2,26 @@
   "name": "eduplatform-frontend",
   "private": true,
   "description": "EduPlatform frontend: institution web app and super admin console",
-  "packageManager": "pnpm@10.12.1",
   "engines": {
     "node": ">=22.12"
   },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "pnpm --parallel --filter ./apps/* dev",
-    "dev:web": "pnpm --filter @eduplatform/web dev",
-    "dev:admin": "pnpm --filter @eduplatform/admin dev",
-    "build": "pnpm --filter ./apps/* build",
+    "dev": "concurrently --names web,admin --prefix-colors blue,magenta \"npm run dev -w apps/web\" \"npm run dev -w apps/admin\"",
+    "dev:web": "npm run dev -w apps/web",
+    "dev:admin": "npm run dev -w apps/admin",
+    "build": "npm run build -w apps/web -w apps/admin",
     "lint": "eslint .",
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
+    "concurrently": "^9.2.1",
     "eslint": "^9.33.0",
     "globals": "^16.3.0",
     "prettier": "^3.6.2",
