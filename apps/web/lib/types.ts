@@ -135,3 +135,56 @@ export interface Page<T> {
   page: number;
   pageSize: number;
 }
+
+// --- Academic module -----------------------------------------------------------------------------
+
+export type AcademicYearStatus = 'PLANNED' | 'ACTIVE' | 'CLOSED';
+
+export interface AcademicYear {
+  id: string;
+  institutionId: string;
+  institution: { id: string; name: string };
+  name: string;
+  startsOn: string;
+  endsOn: string;
+  status: AcademicYearStatus;
+}
+
+/** One level of an institution's classes, e.g. { position: 2, name: 'Group' }. */
+export interface ClassLevel {
+  id: string;
+  position: number;
+  name: string;
+}
+
+export interface ClassItem {
+  id: string;
+  parentId: string | null;
+  level: number;
+  name: string;
+  code: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+/** GET /campuses/:id/classes */
+export interface CampusClasses {
+  campus: {
+    id: string;
+    name: string;
+    institutionId: string;
+    institution: { id: string; name: string };
+  };
+  levels: ClassLevel[];
+  classes: ClassItem[];
+}
+
+export interface Batch {
+  id: string;
+  institutionId: string;
+  institution: { id: string; name: string };
+  name: string;
+  code: string;
+  stage: string;
+  status: 'ACTIVE' | 'COMPLETED';
+}

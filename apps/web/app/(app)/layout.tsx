@@ -8,10 +8,13 @@ import { AppShell, Button, UserBadge, type NavItem } from '@eduplatform/ui';
 import {
   Building,
   Building2,
+  CalendarDays,
   History,
   KeyRound,
+  Layers,
   LayoutDashboard,
   LogOut,
+  Network,
   ShieldCheck,
   Users,
 } from 'lucide-react';
@@ -38,15 +41,41 @@ const MENU: (NavItem & { permission?: string })[] = [
   { href: '/audit', label: 'Audit log', icon: <History />, permission: 'audit.log.view' },
 ];
 
+/** The Academic menu: only when the organization has the Academic module (and the permission). */
+const ACADEMIC_MENU: (NavItem & { permission: string })[] = [
+  {
+    href: '/academic/years',
+    label: 'Academic years',
+    icon: <CalendarDays />,
+    permission: 'academic.year.view',
+  },
+  {
+    href: '/academic/classes',
+    label: 'Classes',
+    icon: <Network />,
+    permission: 'academic.structure.view',
+  },
+  {
+    href: '/academic/batches',
+    label: 'Batches',
+    icon: <Layers />,
+    permission: 'academic.batch.view',
+  },
+];
+
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const me = await getMe();
   const items = MENU.filter((item) => !item.permission || can(me, item.permission));
+  const academic = me.enabledModules.includes('academic')
+    ? ACADEMIC_MENU.filter((item) => can(me, item.permission))
+    : [];
 
   return (
     <AppShell
       brand={{ name: 'EduPlatform', subtitle: me.roleNames.join(', ') }}
       sections={[
         { items },
+        ...(academic.length > 0 ? [{ title: 'Academic', items: academic }] : []),
         {
           title: 'Account',
           items: [{ href: '/account', label: 'Change password', icon: <KeyRound /> }],
