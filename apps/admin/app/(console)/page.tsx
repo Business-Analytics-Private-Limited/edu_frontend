@@ -1,5 +1,6 @@
 /**
- * / : the super admin dashboard. Numbers across all organizations, and the newest ones.
+ * / : the super admin dashboard. Numbers across all organizations, quick links to the main
+ * jobs, and the newest organizations.
  */
 import {
   Badge,
@@ -17,6 +18,25 @@ import {
 import Link from 'next/link';
 import { api } from '../../lib/api';
 import type { Dashboard } from '../../lib/types';
+
+/** The super admin's main jobs, one click from the dashboard. */
+const QUICK_LINKS = [
+  {
+    href: '/organizations/new',
+    title: 'New organization',
+    text: 'Onboard a customer with its first admin',
+  },
+  {
+    href: '/predefined-roles',
+    title: 'Predefined roles',
+    text: 'What Director, Principal, Campus admin… may do, for every organization',
+  },
+  {
+    href: '/organizations',
+    title: 'Organizations',
+    text: 'Switch modules on or off, suspend or activate',
+  },
+];
 
 export default async function DashboardPage() {
   const data = await api<Dashboard>('/super-admin/dashboard');
@@ -51,6 +71,19 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent className="text-3xl font-semibold">{item.value}</CardContent>
           </Card>
+        ))}
+      </div>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        {QUICK_LINKS.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="rounded-lg border bg-card p-4 transition-colors hover:bg-accent"
+          >
+            <div className="font-medium">{link.title}</div>
+            <div className="text-sm text-muted-foreground">{link.text}</div>
+          </Link>
         ))}
       </div>
 

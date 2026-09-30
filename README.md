@@ -4,8 +4,10 @@ The two websites of EduPlatform, a platform for schools and colleges. The backen
 
 | App | URL | Who logs in | What they do |
 |---|---|---|---|
-| **Super admin console** (`apps/admin`) | http://localhost:3003 | EduPlatform staff | Create organizations and their first admin, switch modules on/off, suspend organizations |
-| **Web app** (`apps/web`) | http://localhost:3001 | An organization's staff | Institutions and campuses, users, roles and permissions, audit log, change password |
+| **Super admin console** (`apps/admin`) | http://localhost:3003 | EduPlatform staff | Dashboard; create organizations with their first admin; switch modules on/off; suspend / activate; **predefined roles** (what Director, Principal, Campus admin… may do, for every organization); change password |
+| **Web app** (`apps/web`) | http://localhost:3001 | An organization's staff | Dashboard (your roles and places, numbers for your part, quick actions); organization; institutions and campuses; users with **roles at places**; own roles (View / Create / Edit / Delete grid); audit log (who, where, what); change password |
+
+Everyone in an organization uses the same web app, but sees only what their roles allow, **where** they apply: a Campus admin sees and manages only their campus, a Principal their institution, an Organization admin everything.
 
 ## Getting started (Windows)
 
@@ -66,7 +68,7 @@ The shared pieces:
 | `app/login/` | Login page + `actions.ts` that calls `/auth/login` and stores the token |
 | `app/logout/route.ts` | Clears the cookie, goes to `/login` |
 | `app/(app)/layout.tsx` (web) / `app/(console)/layout.tsx` (admin) | The sidebar menu and header around every page after login |
-| `lib/me.ts` (web) | `getMe()` = who is logged in; `can(me, 'access.user.manage')` = may they do this? Used to hide menu items and buttons |
+| `lib/me.ts` (web) | `getMe()` = who is logged in; `can(me, 'access.user.view')` = may they do this somewhere? (menus); `canAt(me, 'platform.campus.update', { institutionId, campusId })` = may they do it **here**? (buttons) |
 | `packages/ui` | Buttons, cards, tables, form fields, `ActionForm` (every form) and the page frame |
 
 **Hiding a button is not security.** The backend checks every permission again; the frontend only hides what the user can't use.

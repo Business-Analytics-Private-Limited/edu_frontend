@@ -4,16 +4,17 @@
  */
 import { ActionForm, Card, CardContent, Field, Input, PageHeader } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
-import { getMe } from '../../../../lib/me';
+import { can, getMe } from '../../../../lib/me';
 import type { Institution, Role } from '../../../../lib/types';
 import { createUser } from '../actions';
 import { PlaceSelect, RoleSelect } from '../place';
 
 export default async function NewUserPage() {
-  const [me, roles, institutions] = await Promise.all([
-    getMe(),
+  const me = await getMe();
+  const [roles, institutions] = await Promise.all([
     api<Role[]>('/roles'),
-    api<Institution[]>('/institutions'),
+    // The "Where" list; without seeing institutions only "Whole organization" can be offered.
+    can(me, 'platform.institution.view') ? api<Institution[]>('/institutions') : [],
   ]);
 
   return (

@@ -6,6 +6,7 @@
 import { PageHeader, Table, TableHead, Td, Th } from '@eduplatform/ui';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
+import { can, getMe } from '../../../lib/me';
 import type { AuditLog, Institution, Page } from '../../../lib/types';
 
 export default async function AuditPage({
@@ -14,9 +15,11 @@ export default async function AuditPage({
   searchParams: Promise<{ page?: string }>;
 }) {
   const { page = '1' } = await searchParams;
+  const me = await getMe();
   const [result, institutions] = await Promise.all([
     api<Page<AuditLog>>(`/audit-logs?page=${Number(page) || 1}&pageSize=50`),
-    api<Institution[]>('/institutions').catch(() => [] as Institution[]),
+    // For place names; only if the user may see institutions (otherwise the ids stay unnamed).
+    can(me, 'platform.institution.view') ? api<Institution[]>('/institutions') : [],
   ]);
 
   // Names for the "Where" column, from the institutions and campuses the user may see.

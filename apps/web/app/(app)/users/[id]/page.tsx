@@ -32,7 +32,10 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
   const [me, user] = await Promise.all([getMe(), api<User>(`/users/${id}`)]);
   const canUpdate = can(me, 'access.user.update');
   const [roles, institutions] = canUpdate
-    ? await Promise.all([api<Role[]>('/roles'), api<Institution[]>('/institutions')])
+    ? await Promise.all([
+        api<Role[]>('/roles'),
+        can(me, 'platform.institution.view') ? api<Institution[]>('/institutions') : [],
+      ])
     : [[], []];
   const active = user.status === 'ACTIVE';
   const placeOf = (r: User['roles'][number]) => ({
