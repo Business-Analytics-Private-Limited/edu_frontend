@@ -1,14 +1,15 @@
 /**
- * /roles/new: create a role and tick its permissions.
+ * /roles/new: create an own role and tick its permissions.
  */
 import { ActionForm, PageHeader } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
-import type { Permission } from '../../../../lib/types';
+import { getMe } from '../../../../lib/me';
+import type { PermissionResource } from '../../../../lib/types';
 import { createRole } from '../actions';
 import { RoleFields } from '../role-fields';
 
 export default async function NewRolePage() {
-  const permissions = await api<Permission[]>('/permissions');
+  const [me, resources] = await Promise.all([getMe(), api<PermissionResource[]>('/permissions')]);
 
   return (
     <>
@@ -19,7 +20,7 @@ export default async function NewRolePage() {
         pendingLabel="Creating…"
         className="gap-6"
       >
-        <RoleFields permissions={permissions} />
+        <RoleFields resources={resources} myPermissions={me.permissions} />
       </ActionForm>
     </>
   );

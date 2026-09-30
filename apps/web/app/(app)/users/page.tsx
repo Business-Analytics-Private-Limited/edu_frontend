@@ -36,7 +36,7 @@ export default async function UsersPage({
         title="Users"
         description={`${result.total} user(s)`}
         actions={
-          can(me, 'access.user.manage') && (
+          can(me, 'access.user.create') && (
             <Button asChild>
               <Link href="/users/new">Add user</Link>
             </Button>
@@ -66,7 +66,7 @@ export default async function UsersPage({
           <tr>
             <Th>Name</Th>
             <Th>Email</Th>
-            <Th>Role</Th>
+            <Th>Roles</Th>
             <Th>Status</Th>
             <Th>Last login</Th>
           </tr>
@@ -83,7 +83,7 @@ export default async function UsersPage({
                 </Link>
               </Td>
               <Td>{user.email}</Td>
-              <Td>{user.role.name}</Td>
+              <Td>{user.roles.map((r) => r.name).join(', ')}</Td>
               <Td>
                 <Badge variant={user.status === 'ACTIVE' ? 'success' : 'outline'}>
                   {user.status}

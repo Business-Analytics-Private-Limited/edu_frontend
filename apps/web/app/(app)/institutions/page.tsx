@@ -1,6 +1,6 @@
 /**
  * /institutions: the organization's colleges and schools, and a form to add one
- * (only for users with "platform.institution.manage").
+ * (only for users with "platform.institution.create").
  */
 import {
   ActionForm,
@@ -68,7 +68,7 @@ export default async function InstitutionsPage() {
           </Table>
         </div>
 
-        {can(me, 'platform.institution.manage') && (
+        {can(me, 'platform.institution.create') && (
           <Card>
             <CardHeader>
               <CardTitle>Add institution</CardTitle>

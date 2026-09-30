@@ -2,16 +2,19 @@
  * The shapes of the API's answers used by the web app.
  * See all of them in Swagger: http://localhost:3000/api/docs
  */
-export type { FormState } from '@eduplatform/ui';
+export type { FormState, PermissionResource } from '@eduplatform/ui';
 
-/** GET /auth/me: who is logged in, their permissions and their organization's modules. */
+/**
+ * GET /auth/me: who is logged in, their roles, their permissions (everything any of their
+ * roles allows) and their organization's modules.
+ */
 export interface Me {
   type: 'super_admin' | 'user';
   id: string;
   name: string;
   email: string;
   organizationId: string | null;
-  roleName: string | null;
+  roleNames: string[];
   permissions: string[];
   enabledModules: string[];
 }
@@ -71,7 +74,7 @@ export interface User {
   status: UserStatus;
   lastLoginAt: string | null;
   createdAt: string;
-  role: { id: string; name: string };
+  roles: { id: string; name: string }[];
 }
 
 export interface Role {
@@ -79,17 +82,11 @@ export interface Role {
   name: string;
   description: string | null;
   permissions: string[];
-  isSystem: boolean;
-  _count?: { users: number };
-}
-
-/** GET /permissions: every permission, and whether the organization's modules allow it. */
-export interface Permission {
-  key: string;
-  module: string | null;
-  group: string;
-  description: string;
-  available: boolean;
+  /** true = the same in every organization; only EduPlatform can change it. */
+  predefined: boolean;
+  /** false = can't be given from the Users page (Parent, Student). */
+  assignable: boolean;
+  _count: { users: number };
 }
 
 export interface AuditLog {

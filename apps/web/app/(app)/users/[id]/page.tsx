@@ -1,6 +1,6 @@
 /**
- * /users/:id: one user. Users with "access.user.manage" can change the name and role,
- * and deactivate (block login) or activate the user.
+ * /users/:id: one user. Users with "access.user.update" can change the name and roles, and
+ * deactivate (block login) or activate the user.
  */
 import {
   ActionForm,
@@ -12,17 +12,17 @@ import {
   Field,
   Input,
   PageHeader,
-  Select,
 } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
 import { can, getMe } from '../../../../lib/me';
 import type { Role, User } from '../../../../lib/types';
 import { setUserStatus, updateUser } from '../actions';
+import { RoleChoices } from '../role-choices';
 
 export default async function UserPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [me, user] = await Promise.all([getMe(), api<User>(`/users/${id}`)]);
-  const canEdit = can(me, 'access.user.manage');
+  const canEdit = can(me, 'access.user.update');
   const roles = canEdit ? await api<Role[]>('/roles') : [];
   const active = user.status === 'ACTIVE';
 
@@ -60,20 +60,16 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
               <Field label="Name" htmlFor="name">
                 <Input id="name" name="name" defaultValue={user.name} required minLength={2} />
               </Field>
-              <Field label="Role" htmlFor="roleId">
-                <Select id="roleId" name="roleId" defaultValue={user.role.id}>
-                  {roles.map((role) => (
-                    <option key={role.id} value={role.id}>
-                      {role.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+              <RoleChoices
+                roles={roles}
+                checked={user.roles.map((r) => r.id)}
+                myPermissions={me.permissions}
+              />
             </ActionForm>
           ) : (
             <dl className="grid grid-cols-2 gap-y-2 text-sm">
-              <dt className="text-muted-foreground">Role</dt>
-              <dd>{user.role.name}</dd>
+              <dt className="text-muted-foreground">Roles</dt>
+              <dd>{user.roles.map((r) => r.name).join(', ')}</dd>
             </dl>
           )}
           <p className="mt-4 text-xs text-muted-foreground">

@@ -1,6 +1,7 @@
 /**
  * /institutions/:id: one institution and its campuses.
- * Editing needs "platform.institution.manage"; campuses need "platform.campus.manage".
+ * Each button needs its own permission: platform.institution.update / .delete and
+ * platform.campus.create / .update / .delete.
  */
 import {
   ActionForm,
@@ -34,8 +35,11 @@ export default async function InstitutionPage({ params }: { params: Promise<{ id
     getMe(),
     api<InstitutionDetail>(`/institutions/${id}`),
   ]);
-  const canEdit = can(me, 'platform.institution.manage');
-  const canEditCampuses = can(me, 'platform.campus.manage');
+  const canEdit = can(me, 'platform.institution.update');
+  const canDelete = can(me, 'platform.institution.delete');
+  const canAddCampus = can(me, 'platform.campus.create');
+  const canRenameCampus = can(me, 'platform.campus.update');
+  const canDeleteCampus = can(me, 'platform.campus.delete');
 
   return (
     <>
@@ -43,7 +47,7 @@ export default async function InstitutionPage({ params }: { params: Promise<{ id
         title={institution.name}
         description={`${institution.code} · ${INSTITUTION_TYPES[institution.type]}`}
         actions={
-          canEdit && (
+          canDelete && (
             <ActionForm
               action={deleteInstitution.bind(null, institution.id)}
               submitLabel="Delete institution"
@@ -64,14 +68,14 @@ export default async function InstitutionPage({ params }: { params: Promise<{ id
               <tr>
                 <Th>Name</Th>
                 <Th>Code</Th>
-                {canEditCampuses && <Th />}
+                {canDeleteCampus && <Th />}
               </tr>
             </TableHead>
             <tbody>
               {institution.campuses.map((campus) => (
                 <tr key={campus.id}>
                   <Td>
-                    {canEditCampuses ? (
+                    {canRenameCampus ? (
                       <ActionForm
                         action={renameCampus.bind(null, institution.id, campus.id)}
                         submitLabel="Rename"
@@ -92,7 +96,7 @@ export default async function InstitutionPage({ params }: { params: Promise<{ id
                     )}
                   </Td>
                   <Td>{campus.code}</Td>
-                  {canEditCampuses && (
+                  {canDeleteCampus && (
                     <Td className="text-right">
                       <ActionForm
                         action={deleteCampus.bind(null, institution.id, campus.id)}
@@ -118,7 +122,7 @@ export default async function InstitutionPage({ params }: { params: Promise<{ id
         </div>
 
         <div className="flex flex-col gap-6">
-          {canEditCampuses && (
+          {canAddCampus && (
             <Card>
               <CardHeader>
                 <CardTitle>Add campus</CardTitle>

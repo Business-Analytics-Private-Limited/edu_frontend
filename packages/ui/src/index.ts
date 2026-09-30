@@ -19,6 +19,11 @@ export {
 } from './components/card';
 export { EmptyState, type EmptyStateProps } from './components/empty-state';
 export { Checkbox, Field, Input, Label, Select } from './components/form';
+export {
+  PermissionGrid,
+  type PermissionGridProps,
+  type PermissionResource,
+} from './components/permission-grid';
 export { Table, TableHead, Td, Th } from './components/table';
 
 // Page frame

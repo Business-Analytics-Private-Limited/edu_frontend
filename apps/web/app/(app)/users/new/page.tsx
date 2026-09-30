@@ -1,13 +1,15 @@
 /**
- * /users/new: add a user. The role decides what they may do.
+ * /users/new: add a user and tick their roles.
  */
-import { ActionForm, Card, CardContent, Field, Input, PageHeader, Select } from '@eduplatform/ui';
+import { ActionForm, Card, CardContent, Field, Input, PageHeader } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
+import { getMe } from '../../../../lib/me';
 import type { Role } from '../../../../lib/types';
 import { createUser } from '../actions';
+import { RoleChoices } from '../role-choices';
 
 export default async function NewUserPage() {
-  const roles = await api<Role[]>('/roles');
+  const [me, roles] = await Promise.all([getMe(), api<Role[]>('/roles')]);
 
   return (
     <>
@@ -27,15 +29,7 @@ export default async function NewUserPage() {
             <Field label="Temporary password" htmlFor="password" hint="At least 10 characters">
               <Input id="password" name="password" type="text" required minLength={10} />
             </Field>
-            <Field label="Role" htmlFor="roleId">
-              <Select id="roleId" name="roleId" required>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+            <RoleChoices roles={roles} checked={[]} myPermissions={me.permissions} />
           </ActionForm>
         </CardContent>
       </Card>

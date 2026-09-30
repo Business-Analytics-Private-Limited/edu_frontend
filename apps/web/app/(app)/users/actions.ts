@@ -1,6 +1,7 @@
 'use server';
 /**
- * Server actions for users: add, edit (name and role), deactivate / activate.
+ * Server actions for users: add, edit (name and roles), deactivate / activate.
+ * The ticked role checkboxes all have name="roleIds", so form.getAll('roleIds') gives the list.
  */
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -16,7 +17,7 @@ export async function createUser(_previous: FormState, form: FormData): Promise<
         name: form.get('name'),
         email: form.get('email'),
         password: form.get('password'),
-        roleId: form.get('roleId'),
+        roleIds: form.getAll('roleIds'),
       },
     });
   } catch (error) {
@@ -33,7 +34,7 @@ export async function updateUser(
   try {
     await api(`/users/${id}`, {
       method: 'PATCH',
-      body: { name: form.get('name'), roleId: form.get('roleId') },
+      body: { name: form.get('name'), roleIds: form.getAll('roleIds') },
     });
   } catch (error) {
     return { error: errorMessage(error) };

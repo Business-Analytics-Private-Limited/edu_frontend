@@ -1,6 +1,6 @@
 /**
  * /organization: the organization's details and the modules it has.
- * Users with "platform.settings.manage" can edit the contact details.
+ * Users with "platform.organization.update" can edit the contact details.
  */
 import {
   ActionForm,
@@ -21,7 +21,7 @@ import { updateOrganization } from './actions';
 
 export default async function OrganizationPage() {
   const [me, org] = await Promise.all([getMe(), api<OwnOrganization>('/organization')]);
-  const canEdit = can(me, 'platform.settings.manage');
+  const canEdit = can(me, 'platform.organization.update');
 
   return (
     <>

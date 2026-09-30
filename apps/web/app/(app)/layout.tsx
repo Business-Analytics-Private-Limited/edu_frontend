@@ -25,7 +25,7 @@ const MENU: (NavItem & { permission?: string })[] = [
     href: '/organization',
     label: 'Organization',
     icon: <Building2 />,
-    permission: 'platform.institution.view',
+    permission: 'platform.organization.view',
   },
   {
     href: '/institutions',
@@ -34,7 +34,7 @@ const MENU: (NavItem & { permission?: string })[] = [
     permission: 'platform.institution.view',
   },
   { href: '/users', label: 'Users', icon: <Users />, permission: 'access.user.view' },
-  { href: '/roles', label: 'Roles', icon: <ShieldCheck />, permission: 'access.role.manage' },
+  { href: '/roles', label: 'Roles', icon: <ShieldCheck />, permission: 'access.role.view' },
   { href: '/audit', label: 'Audit log', icon: <History />, permission: 'audit.log.view' },
 ];
 
@@ -44,7 +44,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <AppShell
-      brand={{ name: 'EduPlatform', subtitle: me.roleName ?? undefined }}
+      brand={{ name: 'EduPlatform', subtitle: me.roleNames.join(', ') }}
       sections={[
         { items },
         {

@@ -4,7 +4,7 @@
  * "/console" to the URLs.
  */
 import { AppShell, Button, UserBadge, type NavSection } from '@eduplatform/ui';
-import { Blocks, Building2, LayoutDashboard, LogOut } from 'lucide-react';
+import { Blocks, Building2, KeyRound, LayoutDashboard, LogOut, ShieldCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { api } from '../../lib/api';
 import type { Me } from '../../lib/types';
@@ -15,7 +15,12 @@ const MENU: NavSection[] = [
       { href: '/', label: 'Dashboard', icon: <LayoutDashboard /> },
       { href: '/organizations', label: 'Organizations', icon: <Building2 /> },
       { href: '/modules', label: 'Modules', icon: <Blocks /> },
+      { href: '/predefined-roles', label: 'Predefined roles', icon: <ShieldCheck /> },
     ],
+  },
+  {
+    title: 'Account',
+    items: [{ href: '/account', label: 'Change password', icon: <KeyRound /> }],
   },
 ];
 

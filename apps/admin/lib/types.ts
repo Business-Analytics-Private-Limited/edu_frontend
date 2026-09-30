@@ -54,5 +54,15 @@ export interface Page<T> {
   pageSize: number;
 }
 
+/** A predefined role (Director, Principal, ...): the same in every organization. */
+export interface PredefinedRole {
+  key: string;
+  name: string;
+  description: string;
+  permissions: string[];
+  /** false = given from a student's record, not the Users page (Parent, Student). */
+  assignable: boolean;
+}
+
 /** What a form's server action returns: a message to show, or nothing. */
-export type { FormState } from '@eduplatform/ui';
+export type { FormState, PermissionResource } from '@eduplatform/ui';
