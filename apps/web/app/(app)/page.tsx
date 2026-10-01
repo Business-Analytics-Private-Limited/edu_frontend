@@ -25,7 +25,7 @@ import type { Dashboard, Grant, Institution } from '../../lib/types';
 /** Module names, and whether their screens exist yet. */
 const MODULES: Record<string, { name: string; live: boolean }> = {
   academic: { name: 'Academic', live: true },
-  students: { name: 'Students', live: false },
+  students: { name: 'Students', live: true },
   attendance: { name: 'Attendance', live: false },
   portal: { name: 'Parent and student portal', live: false },
   imports: { name: 'Data import', live: false },

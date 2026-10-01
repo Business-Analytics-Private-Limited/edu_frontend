@@ -11,6 +11,7 @@ import {
   Building2,
   CalendarDays,
   CalendarOff,
+  GraduationCap,
   History,
   KeyRound,
   Layers,
@@ -18,6 +19,7 @@ import {
   LogOut,
   Network,
   ShieldCheck,
+  UserPlus,
   Users,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -41,6 +43,22 @@ const MENU: (NavItem & { permission?: string })[] = [
   { href: '/users', label: 'Users', icon: <Users />, permission: 'access.user.view' },
   { href: '/roles', label: 'Roles', icon: <ShieldCheck />, permission: 'access.role.view' },
   { href: '/audit', label: 'Audit log', icon: <History />, permission: 'audit.log.view' },
+];
+
+/** The Students menu: only when the organization has the Students module (and the permission). */
+const STUDENTS_MENU: (NavItem & { permission: string })[] = [
+  {
+    href: '/students',
+    label: 'Students',
+    icon: <GraduationCap />,
+    permission: 'students.student.view',
+  },
+  {
+    href: '/students/new',
+    label: 'Admit student',
+    icon: <UserPlus />,
+    permission: 'students.student.create',
+  },
 ];
 
 /** The Academic menu: only when the organization has the Academic module (and the permission). */
@@ -80,6 +98,9 @@ const ACADEMIC_MENU: (NavItem & { permission: string })[] = [
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const me = await getMe();
   const items = MENU.filter((item) => !item.permission || can(me, item.permission));
+  const students = me.enabledModules.includes('students')
+    ? STUDENTS_MENU.filter((item) => can(me, item.permission))
+    : [];
   const academic = me.enabledModules.includes('academic')
     ? ACADEMIC_MENU.filter((item) => can(me, item.permission))
     : [];
@@ -89,6 +110,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       brand={{ name: 'EduPlatform', subtitle: me.roleNames.join(', ') }}
       sections={[
         { items },
+        ...(students.length > 0 ? [{ title: 'Students', items: students }] : []),
         ...(academic.length > 0 ? [{ title: 'Academic', items: academic }] : []),
         {
           title: 'Account',

@@ -228,3 +228,79 @@ export interface Calendar {
   institutions: { id: string; name: string; weeklyOffDays: number[] }[];
   holidays: Holiday[];
 }
+
+// --- Students module -----------------------------------------------------------------------------
+
+export type Gender = 'MALE' | 'FEMALE' | 'OTHER' | 'UNDISCLOSED';
+export type StudentStatus = 'ACTIVE' | 'TRANSFERRED' | 'DISCONTINUED' | 'ALUMNI';
+export type GuardianRelation = 'FATHER' | 'MOTHER' | 'GUARDIAN' | 'OTHER';
+
+/** A section name with its parent, e.g. { name: 'Section A', parent: { name: 'MPC' } }. */
+export interface SectionRef {
+  id: string;
+  name: string;
+  parent: { name: string } | null;
+}
+
+export interface StudentListItem {
+  id: string;
+  admissionNo: string;
+  fullName: string;
+  surname: string | null;
+  gender: Gender;
+  phone: string | null;
+  status: StudentStatus;
+  campus: { id: string; name: string };
+  batch: { id: string; name: string; stage: string } | null;
+  enrolments: {
+    rollNo: string | null;
+    academicYear: { id: string; name: string };
+    class: SectionRef;
+  }[];
+}
+
+export interface Guardian {
+  id: string;
+  fullName: string;
+  phone: string | null;
+  email: string | null;
+  occupation: string | null;
+}
+
+export interface Enrolment {
+  id: string;
+  rollNo: string | null;
+  status: 'ACTIVE' | 'PROMOTED' | 'COMPLETED' | 'LEFT';
+  academicYear: { id: string; name: string; status: AcademicYearStatus };
+  class: SectionRef;
+}
+
+export interface StudentProfile {
+  id: string;
+  institutionId: string;
+  campusId: string;
+  institution: { id: string; name: string };
+  campus: { id: string; name: string };
+  admissionNo: string;
+  admissionDate: string;
+  fullName: string;
+  surname: string | null;
+  dateOfBirth: string;
+  gender: Gender;
+  bloodGroup: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  status: StudentStatus;
+  batchId: string | null;
+  batch: { id: string; name: string; stage: string } | null;
+  guardians: { id: string; relation: GuardianRelation; isPrimary: boolean; guardian: Guardian }[];
+  enrolments: Enrolment[];
+  statusChanges: {
+    id: string;
+    fromStatus: StudentStatus | null;
+    toStatus: StudentStatus;
+    effectiveOn: string;
+    reason: string | null;
+  }[];
+}
