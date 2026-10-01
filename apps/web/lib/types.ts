@@ -188,3 +188,43 @@ export interface Batch {
   stage: string;
   status: 'ACTIVE' | 'COMPLETED';
 }
+
+export interface Subject {
+  id: string;
+  institutionId: string;
+  name: string;
+  code: string;
+  isActive: boolean;
+}
+
+export interface SubjectListItem extends Subject {
+  institution: { id: string; name: string };
+  _count: { classes: number };
+}
+
+/** GET /classes/:id/subjects */
+export interface ClassSubjects {
+  class: { id: string; name: string; code: string; campusId: string };
+  /** The classes above this one, top first. */
+  path: { id: string; name: string }[];
+  own: Subject[];
+  inherited: { subject: Subject; from: { id: string; name: string } }[];
+  /** The institution's subjects in use, to choose from. */
+  available: Subject[];
+}
+
+export interface Holiday {
+  id: string;
+  institutionId: string;
+  campusId: string | null;
+  campus: { id: string; name: string } | null;
+  name: string;
+  startsOn: string;
+  endsOn: string;
+}
+
+/** GET /calendar */
+export interface Calendar {
+  institutions: { id: string; name: string; weeklyOffDays: number[] }[];
+  holidays: Holiday[];
+}

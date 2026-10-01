@@ -164,6 +164,12 @@ function ClassRow({
         <span className="text-xs text-muted-foreground">
           {item.code} · {levelName}
         </span>
+        <Link
+          href={`/academic/classes/${item.id}/subjects`}
+          className="text-xs text-primary hover:underline"
+        >
+          Subjects
+        </Link>
         {isLast && <Badge variant="outline">students go here</Badge>}
         {!item.isActive && <Badge variant="warning">not in use</Badge>}
         {!hasChildren && canAt(me, 'academic.structure.delete', place) && (

@@ -1,6 +1,7 @@
 'use server';
 /**
- * Server actions for the Academic screens: academic years, class levels, classes, batches.
+ * Server actions for the Academic screens: academic years, class levels, classes, batches,
+ * subjects and the calendar.
  * Each calls the API and returns a message for the form; the API checks every permission and
  * place again.
  */
@@ -117,4 +118,93 @@ export async function updateBatch(
 
 export async function deleteBatch(id: string): Promise<FormState> {
   return run('/academic/batches', () => api(`/batches/${id}`, { method: 'DELETE' }));
+}
+
+// --- Subjects ------------------------------------------------------------------------------------
+
+export async function createSubject(_previous: FormState, form: FormData): Promise<FormState> {
+  return run(
+    '/academic/subjects',
+    () =>
+      api('/subjects', {
+        method: 'POST',
+        body: {
+          institutionId: form.get('institutionId'),
+          name: form.get('name'),
+          code: form.get('code'),
+        },
+      }),
+    'Subject added',
+  );
+}
+
+export async function setSubjectInUse(id: string, isActive: boolean): Promise<FormState> {
+  return run('/academic/subjects', () =>
+    api(`/subjects/${id}`, { method: 'PATCH', body: { isActive } }),
+  );
+}
+
+export async function deleteSubject(id: string): Promise<FormState> {
+  return run('/academic/subjects', () => api(`/subjects/${id}`, { method: 'DELETE' }));
+}
+
+/** The ticked subject checkboxes all have name="subjectIds". */
+export async function setClassSubjects(
+  classId: string,
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  return run(
+    `/academic/classes/${classId}/subjects`,
+    () =>
+      api(`/classes/${classId}/subjects`, {
+        method: 'PUT',
+        body: { subjectIds: form.getAll('subjectIds') },
+      }),
+    'Subjects saved',
+  );
+}
+
+// --- Calendar ------------------------------------------------------------------------------------
+
+/** The ticked weekday checkboxes all have name="days" (0 = Sunday ... 6 = Saturday). */
+export async function setWeeklyOff(
+  institutionId: string,
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  return run(
+    '/academic/calendar',
+    () =>
+      api(`/institutions/${institutionId}/weekly-off`, {
+        method: 'PUT',
+        body: { days: form.getAll('days').map(Number) },
+      }),
+    'Saved',
+  );
+}
+
+/** The "Where" value is "institution:<id>" (all campuses) or "campus:<institutionId>:<campusId>". */
+export async function createHoliday(_previous: FormState, form: FormData): Promise<FormState> {
+  const [kind, institutionId, campusId] = String(form.get('place') ?? '').split(':');
+  const endsOn = String(form.get('endsOn') ?? '');
+  return run(
+    '/academic/calendar',
+    () =>
+      api('/holidays', {
+        method: 'POST',
+        body: {
+          institutionId,
+          campusId: kind === 'campus' ? campusId : undefined,
+          name: form.get('name'),
+          startsOn: form.get('startsOn'),
+          endsOn: endsOn || undefined,
+        },
+      }),
+    'Holiday added',
+  );
+}
+
+export async function deleteHoliday(id: string): Promise<FormState> {
+  return run('/academic/calendar', () => api(`/holidays/${id}`, { method: 'DELETE' }));
 }

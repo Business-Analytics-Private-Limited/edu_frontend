@@ -6,9 +6,11 @@
  */
 import { AppShell, Button, UserBadge, type NavItem } from '@eduplatform/ui';
 import {
+  BookOpen,
   Building,
   Building2,
   CalendarDays,
+  CalendarOff,
   History,
   KeyRound,
   Layers,
@@ -60,6 +62,18 @@ const ACADEMIC_MENU: (NavItem & { permission: string })[] = [
     label: 'Batches',
     icon: <Layers />,
     permission: 'academic.batch.view',
+  },
+  {
+    href: '/academic/subjects',
+    label: 'Subjects',
+    icon: <BookOpen />,
+    permission: 'academic.subject.view',
+  },
+  {
+    href: '/academic/calendar',
+    label: 'Calendar',
+    icon: <CalendarOff />,
+    permission: 'academic.calendar.view',
   },
 ];
 
