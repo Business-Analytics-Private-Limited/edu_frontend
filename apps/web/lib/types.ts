@@ -304,3 +304,17 @@ export interface StudentProfile {
     reason: string | null;
   }[];
 }
+
+/** GET /promotions/preview */
+export interface PromotionPreview {
+  campus: { id: string; name: string };
+  fromYear: { id: string; name: string };
+  toYear: { id: string; name: string };
+  rows: {
+    from: { id: string; label: string };
+    suggestion: { kind: 'section'; sectionId: string } | { kind: 'graduate' } | { kind: 'choose' };
+    students: { id: string; fullName: string; admissionNo: string; rollNo: string | null }[];
+    alreadyPlaced: number;
+  }[];
+  sections: { id: string; label: string }[];
+}

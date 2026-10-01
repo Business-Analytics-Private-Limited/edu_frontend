@@ -175,3 +175,62 @@ export async function deleteStudent(id: string): Promise<FormState> {
   }
   redirect('/students');
 }
+
+// --- Promotion and shuffle -----------------------------------------------------------------------
+
+/**
+ * Applies a promotion. Each section row has a drop-down named "to_<fromSectionId>" whose value is
+ * "section:<id>", "graduate" or "skip".
+ */
+export async function applyPromotion(_previous: FormState, form: FormData): Promise<FormState> {
+  const mapping = [...form.keys()]
+    .filter((key) => key.startsWith('to_'))
+    .map((key) => {
+      const fromSectionId = key.slice(3);
+      const [kind, id] = String(form.get(key)).split(':');
+      if (kind === 'section') return { fromSectionId, toSectionId: id };
+      if (kind === 'graduate') return { fromSectionId, graduate: true };
+      return { fromSectionId };
+    });
+  let result: { promoted: number; graduated: number; batchesMoved: number };
+  try {
+    result = await api('/promotions', {
+      method: 'POST',
+      body: {
+        campusId: text(form, 'campusId'),
+        fromYearId: text(form, 'fromYearId'),
+        toYearId: text(form, 'toYearId'),
+        mapping,
+        batchStage: text(form, 'batchStage'),
+        keepRollNumbers: form.get('keepRollNumbers') === 'on',
+      },
+    });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath('/students/promote');
+  return {
+    success: `Promoted ${result.promoted}, finished ${result.graduated}${
+      result.batchesMoved ? `, ${result.batchesMoved} batch(es) moved to the new stage` : ''
+    }.`,
+  };
+}
+
+/** Shuffle: the ticked students (name="studentIds") to the chosen section. */
+export async function moveStudents(_previous: FormState, form: FormData): Promise<FormState> {
+  let result: { moved: number };
+  try {
+    result = await api('/enrolments/move', {
+      method: 'POST',
+      body: {
+        academicYearId: text(form, 'academicYearId'),
+        studentIds: form.getAll('studentIds'),
+        toSectionId: text(form, 'toSectionId'),
+      },
+    });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath('/students/move');
+  return { success: `Moved ${result.moved} student(s). Roll numbers were cleared; set new ones.` };
+}

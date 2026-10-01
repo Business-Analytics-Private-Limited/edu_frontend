@@ -6,6 +6,8 @@
  */
 import { AppShell, Button, UserBadge, type NavItem } from '@eduplatform/ui';
 import {
+  ArrowLeftRight,
+  ArrowUpRight,
   BookOpen,
   Building,
   Building2,
@@ -58,6 +60,18 @@ const STUDENTS_MENU: (NavItem & { permission: string })[] = [
     label: 'Admit student',
     icon: <UserPlus />,
     permission: 'students.student.create',
+  },
+  {
+    href: '/students/promote',
+    label: 'Promote',
+    icon: <ArrowUpRight />,
+    permission: 'students.enrolment.promote',
+  },
+  {
+    href: '/students/move',
+    label: 'Move students',
+    icon: <ArrowLeftRight />,
+    permission: 'students.enrolment.transfer',
   },
 ];
 
