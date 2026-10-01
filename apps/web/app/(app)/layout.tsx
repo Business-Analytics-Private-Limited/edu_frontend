@@ -28,6 +28,7 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react';
+import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { can, getMe } from '../../lib/me';
 
@@ -149,6 +150,8 @@ const ACADEMIC_MENU: (NavItem & { permission: string })[] = [
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const me = await getMe();
+  // Parents and students have their own pages (app/portal).
+  if (me.kind !== 'staff') redirect('/portal');
   const items = MENU.filter((item) => !item.permission || can(me, item.permission));
   const students = me.enabledModules.includes('students')
     ? STUDENTS_MENU.filter((item) => can(me, item.permission))

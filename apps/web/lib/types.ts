@@ -14,6 +14,10 @@ export interface Me {
   name: string;
   email: string;
   organizationId: string | null;
+  /** "staff" uses the web app; "parent" / "student" use the portal (app/portal). */
+  kind: 'staff' | 'parent' | 'student' | null;
+  /** Portal logins: the students they may see. */
+  studentIds: string[];
   roleNames: string[];
   /** Everything the user may do somewhere; `grants` says where. */
   permissions: string[];
@@ -299,7 +303,14 @@ export interface StudentProfile {
   status: StudentStatus;
   batchId: string | null;
   batch: { id: string; name: string; stage: string } | null;
-  guardians: { id: string; relation: GuardianRelation; isPrimary: boolean; guardian: Guardian }[];
+  guardians: {
+    id: string;
+    relation: GuardianRelation;
+    isPrimary: boolean;
+    guardian: Guardian & { login: PortalLogin | null };
+  }[];
+  /** The student's own portal login. */
+  login: PortalLogin | null;
   enrolments: Enrolment[];
   statusChanges: {
     id: string;
@@ -410,4 +421,48 @@ export interface StudentAttendance {
     corrected: boolean;
     correctionReason: string | null;
   }[];
+}
+
+// --- Parent and student portal -------------------------------------------------------------------
+
+export interface PortalLogin {
+  id: string;
+  email: string;
+  status: UserStatus;
+}
+
+/** What a parent or student sees of a student. */
+export interface PortalStudent {
+  id: string;
+  fullName: string;
+  surname: string | null;
+  admissionNo: string;
+  dateOfBirth: string;
+  status: StudentStatus;
+  institution: { name: string };
+  campus: { name: string };
+  batch: { name: string; stage: string } | null;
+  enrolments: { rollNo: string | null; academicYear: { name: string }; class: SectionRef }[];
+  guardians?: {
+    relation: GuardianRelation;
+    isPrimary: boolean;
+    guardian: { fullName: string; phone: string | null };
+  }[];
+}
+
+/** GET /portal/me */
+export interface PortalMe {
+  name: string;
+  kind: 'parent' | 'student';
+  attendance: boolean;
+  students: PortalStudent[];
+}
+
+/** GET /portal/students/:id/attendance */
+export interface PortalAttendance {
+  from: string;
+  to: string;
+  counts: AttendanceCounts;
+  percentage: number | null;
+  days: { date: string; status: AttendanceStatus; remark: string | null }[];
 }

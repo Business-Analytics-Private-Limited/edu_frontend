@@ -40,7 +40,9 @@ import {
   deleteStudent,
   enrol,
   makePrimaryGuardian,
+  grantPortalAccess,
   removeGuardian,
+  revokePortalAccess,
   transferCampus,
   updateEnrolment,
   updateStudent,
@@ -438,6 +440,9 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
         </Card>
       )}
 
+      {/* --- Portal logins --------------------------------------------------------------------- */}
+      {canEdit && me.enabledModules.includes('portal') && <PortalAccess student={student} />}
+
       {/* --- Move to another campus ------------------------------------------------------------ */}
       {targetCampuses.length > 0 && (
         <Card className="mt-6 max-w-xl">
@@ -543,5 +548,89 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * The student's and their guardians' portal logins: who has one (with Remove), and a form to
+ * give one. A guardian's login covers all their children.
+ */
+function PortalAccess({ student }: { student: StudentProfile }) {
+  const logins = [
+    ...(student.login ? [{ who: `${student.fullName} (student)`, login: student.login }] : []),
+    ...student.guardians
+      .filter((g) => g.guardian.login)
+      .map((g) => ({
+        who: `${g.guardian.fullName} (${RELATIONS[g.relation]})`,
+        login: g.guardian.login!,
+      })),
+  ];
+  const options = [
+    ...(student.login ? [] : [{ value: 'STUDENT', label: `${student.fullName} (student)` }]),
+    ...student.guardians
+      .filter((g) => !g.guardian.login)
+      .map((g) => ({
+        value: `GUARDIAN:${g.guardian.id}`,
+        label: `${g.guardian.fullName} (${RELATIONS[g.relation]})`,
+      })),
+  ];
+  return (
+    <Card className="mt-6 max-w-xl">
+      <CardHeader>
+        <CardTitle>Parent / student portal logins</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4 text-sm">
+        {logins.length === 0 && <p className="text-muted-foreground">No logins yet.</p>}
+        {logins.map(({ who, login }) => (
+          <div key={login.id} className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">{who}</span>
+            <span className="text-muted-foreground">{login.email}</span>
+            <ActionForm
+              action={revokePortalAccess.bind(null, student.id, login.id)}
+              submitLabel="Remove"
+              pendingLabel="…"
+              confirmMessage={`Remove the login ${login.email}? They will no longer be able to log in.`}
+              submitVariant="ghost"
+              submitSize="sm"
+            />
+          </div>
+        ))}
+        {options.length > 0 && (
+          <details>
+            <summary className="cursor-pointer text-primary">+ Give a portal login</summary>
+            <ActionForm
+              action={grantPortalAccess.bind(null, student.id)}
+              submitLabel="Create login"
+              resetOnSuccess
+              className="mt-3"
+            >
+              <Field
+                label="For"
+                htmlFor="portalFor"
+                hint="A parent's login covers all their children"
+              >
+                <Select id="portalFor" name="for">
+                  {options.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Email (their login)" htmlFor="portalEmail">
+                <Input id="portalEmail" name="email" type="email" required />
+              </Field>
+              <Field
+                label="Temporary password"
+                htmlFor="portalPassword"
+                hint="At least 10 characters"
+              >
+                <Input id="portalPassword" name="password" type="text" minLength={10} required />
+              </Field>
+            </ActionForm>
+          </details>
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -348,3 +348,28 @@ export async function undoPromotion(runId: string): Promise<FormState> {
   revalidatePath('/students/promote');
   return { success: `Undone for ${result.undone} student(s).` };
 }
+
+// --- Portal logins (parent and student portal) ---------------------------------------------------
+
+/** "for" is "STUDENT" or "GUARDIAN:<guardianId>". */
+export async function grantPortalAccess(id: string, _previous: FormState, form: FormData) {
+  const [who, guardianId] = String(form.get('for') ?? '').split(':');
+  return forStudent(
+    id,
+    () =>
+      api(`/students/${id}/portal-access`, {
+        method: 'POST',
+        body: {
+          for: who,
+          guardianId: guardianId || undefined,
+          email: text(form, 'email'),
+          password: text(form, 'password'),
+        },
+      }),
+    'Login created. Give them the email and temporary password.',
+  );
+}
+
+export async function revokePortalAccess(id: string, userId: string) {
+  return forStudent(id, () => api(`/students/${id}/portal-access/${userId}`, { method: 'DELETE' }));
+}
