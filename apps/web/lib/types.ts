@@ -320,3 +320,14 @@ export interface PromotionPreview {
   }[];
   sections: { id: string; label: string }[];
 }
+
+/** GET /promotions?campusId= : promotions applied on a campus, newest first. */
+export interface PromotionRun {
+  id: string;
+  fromYear: string;
+  toYear: string;
+  promoted: number;
+  graduated: number;
+  createdAt: string;
+  undoneAt: string | null;
+}

@@ -4,6 +4,7 @@
  *   2. the preview shows each section with its students and a SUGGESTED section in the new year
  *      (the next class at the top level, same path below), or "Finish (alumni)" after the last;
  *   3. change any choice, optionally move the batches to a new stage, and apply.
+ * Below: the campus's recent promotions; the newest can be undone while nothing changed since.
  * Needs "students.enrolment.promote" at the campus.
  */
 import {
@@ -24,8 +25,13 @@ import {
 } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
 import { can, canAt, getMe } from '../../../../lib/me';
-import type { AcademicYear, Institution, PromotionPreview } from '../../../../lib/types';
-import { applyPromotion } from '../actions';
+import type {
+  AcademicYear,
+  Institution,
+  PromotionPreview,
+  PromotionRun,
+} from '../../../../lib/types';
+import { applyPromotion, undoPromotion } from '../actions';
 
 export default async function PromotePage({
   searchParams,
@@ -52,6 +58,9 @@ export default async function PromotePage({
       )
     : null;
   const total = preview?.rows.reduce((n, r) => n + r.students.length, 0) ?? 0;
+  const runs = campusId
+    ? await api<PromotionRun[]>(`/promotions?${new URLSearchParams({ campusId })}`)
+    : [];
 
   return (
     <>
@@ -200,6 +209,53 @@ export default async function PromotePage({
             </CardContent>
           </Card>
         </ActionForm>
+      )}
+
+      {runs.length > 0 && (
+        <>
+          <h2 className="mb-3 mt-10 text-lg font-semibold">Recent promotions on this campus</h2>
+          <Table>
+            <TableHead>
+              <tr>
+                <Th>When</Th>
+                <Th>From → to</Th>
+                <Th>Promoted</Th>
+                <Th>Finished</Th>
+                <Th />
+              </tr>
+            </TableHead>
+            <tbody>
+              {runs.map((run) => (
+                <tr key={run.id}>
+                  <Td className="text-muted-foreground">
+                    {new Date(run.createdAt).toLocaleString()}
+                  </Td>
+                  <Td>
+                    {run.fromYear} → {run.toYear}
+                  </Td>
+                  <Td>{run.promoted}</Td>
+                  <Td>{run.graduated}</Td>
+                  <Td className="text-right">
+                    {run.undoneAt ? (
+                      <Badge variant="outline">
+                        Undone {new Date(run.undoneAt).toLocaleDateString()}
+                      </Badge>
+                    ) : (
+                      <ActionForm
+                        action={undoPromotion.bind(null, run.id)}
+                        submitLabel="Undo"
+                        pendingLabel="Undoing…"
+                        confirmMessage={`Undo the promotion ${run.fromYear} → ${run.toYear}? Students go back to their ${run.fromYear} sections.`}
+                        submitVariant="outline"
+                        submitSize="sm"
+                      />
+                    )}
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </>
       )}
     </>
   );

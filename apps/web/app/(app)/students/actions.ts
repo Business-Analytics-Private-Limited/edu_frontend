@@ -337,3 +337,14 @@ export async function setNumbering(
       : 'Saved: admission numbers are typed by hand.',
   };
 }
+
+export async function undoPromotion(runId: string): Promise<FormState> {
+  let result: { undone: number };
+  try {
+    result = await api(`/promotions/${runId}/undo`, { method: 'POST' });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath('/students/promote');
+  return { success: `Undone for ${result.undone} student(s).` };
+}
