@@ -20,7 +20,9 @@ import {
   LayoutDashboard,
   LogOut,
   Network,
+  Settings,
   ShieldCheck,
+  Upload,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -72,6 +74,18 @@ const STUDENTS_MENU: (NavItem & { permission: string })[] = [
     label: 'Move students',
     icon: <ArrowLeftRight />,
     permission: 'students.enrolment.transfer',
+  },
+  {
+    href: '/students/import',
+    label: 'Import students',
+    icon: <Upload />,
+    permission: 'students.student.import',
+  },
+  {
+    href: '/students/settings',
+    label: 'Student settings',
+    icon: <Settings />,
+    permission: 'students.settings.update',
   },
 ];
 

@@ -27,7 +27,7 @@ import {
 import { api } from '../../../../lib/api';
 import { can, canAt, getMe } from '../../../../lib/me';
 import { sectionOptions } from '../../../../lib/sections';
-import type { AcademicYear, Batch, StudentProfile } from '../../../../lib/types';
+import type { AcademicYear, Batch, Institution, StudentProfile } from '../../../../lib/types';
 import {
   addGuardian,
   changeStatus,
@@ -35,6 +35,7 @@ import {
   enrol,
   makePrimaryGuardian,
   removeGuardian,
+  transferCampus,
   updateEnrolment,
   updateStudent,
 } from '../actions';
@@ -62,6 +63,33 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
           can(me, 'academic.structure.view') ? sectionOptions([student.campusId]) : [],
         ])
       : [[], [], []];
+  // Other campuses of the same institution the student can move to (transfer allowed at both).
+  const otherCampuses =
+    canMove && can(me, 'platform.institution.view')
+      ? (await api<Institution[]>('/institutions'))
+          .filter((i) => i.id === student.institutionId)
+          .flatMap((i) => i.campuses)
+          .filter(
+            (c) =>
+              c.id !== student.campusId &&
+              canAt(me, 'students.enrolment.transfer', {
+                institutionId: student.institutionId,
+                campusId: c.id,
+              }),
+          )
+      : [];
+  const otherSections =
+    otherCampuses.length > 0 && can(me, 'academic.structure.view')
+      ? await sectionOptions(otherCampuses.map((c) => c.id))
+      : [];
+  const hasCurrentSection = student.enrolments.some(
+    (e) => e.status === 'ACTIVE' && e.academicYear.status !== 'CLOSED',
+  );
+  // With a current section, only campuses that have sections to move into.
+  const targetCampuses = hasCurrentSection
+    ? otherCampuses.filter((c) => otherSections.some((s) => s.campusId === c.id))
+    : otherCampuses;
+
   const yearsWithout = years.filter(
     (y) => y.status !== 'CLOSED' && !student.enrolments.some((e) => e.academicYear.id === y.id),
   );
@@ -354,6 +382,53 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
                   <Input id="enrolRollNo" name="rollNo" />
                 </Field>
               </div>
+            </ActionForm>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* --- Move to another campus ------------------------------------------------------------ */}
+      {targetCampuses.length > 0 && (
+        <Card className="mt-6 max-w-xl">
+          <CardHeader>
+            <CardTitle>Move to another campus</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ActionForm
+              action={transferCampus.bind(null, student.id)}
+              submitLabel="Move"
+              confirmMessage={`Move ${student.fullName} to the chosen campus?`}
+            >
+              <Field
+                label="To"
+                htmlFor="to"
+                hint={
+                  hasCurrentSection ? 'Their current section moves to the chosen one' : undefined
+                }
+              >
+                <Select id="to" name="to" required>
+                  {targetCampuses.map((c) =>
+                    hasCurrentSection ? (
+                      <optgroup key={c.id} label={c.name}>
+                        {otherSections
+                          .filter((s) => s.campusId === c.id)
+                          .map((s) => (
+                            <option key={s.id} value={`${c.id}:${s.id}`}>
+                              {s.label}
+                            </option>
+                          ))}
+                      </optgroup>
+                    ) : (
+                      <option key={c.id} value={`${c.id}:`}>
+                        {c.name}
+                      </option>
+                    ),
+                  )}
+                </Select>
+              </Field>
+              <Field label="Reason" htmlFor="transferReason">
+                <Input id="transferReason" name="reason" placeholder="e.g. Closer to home" />
+              </Field>
             </ActionForm>
           </CardContent>
         </Card>

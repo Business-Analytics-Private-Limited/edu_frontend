@@ -76,6 +76,8 @@ export interface Institution {
   type: InstitutionType;
   /** Only the campuses the user may see. */
   campuses: { id: string; name: string; code: string }[];
+  /** Students module: how admission numbers are made, e.g. "{CODE}{YY}{SEQ:4}"; null = by hand. */
+  admissionNoPattern?: string | null;
   _count: { campuses: number };
 }
 

@@ -7,6 +7,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api, errorMessage } from '../../../lib/api';
+import { parseCsv } from '../../../lib/csv';
 import type { FormState, StudentProfile } from '../../../lib/types';
 
 /** A text field, or undefined when left empty (so optional fields are left out). */
@@ -233,4 +234,106 @@ export async function moveStudents(_previous: FormState, form: FormData): Promis
   }
   revalidatePath('/students/move');
   return { success: `Moved ${result.moved} student(s). Roll numbers were cleared; set new ones.` };
+}
+
+// --- Campus transfer, import, numbering ----------------------------------------------------------
+
+/** The "To" drop-down value is "<campusId>:<sectionId>" (or "<campusId>:" without a section). */
+export async function transferCampus(id: string, _previous: FormState, form: FormData) {
+  const [toCampusId, toSectionId] = String(form.get('to') ?? '').split(':');
+  return forStudent(
+    id,
+    () =>
+      api(`/students/${id}/transfer`, {
+        method: 'POST',
+        body: { toCampusId, toSectionId: toSectionId || undefined, reason: text(form, 'reason') },
+      }),
+    'Moved to the new campus',
+  );
+}
+
+/** The columns of an import file (also the template's header). */
+const IMPORT_COLUMNS = [
+  'admissionNo',
+  'admissionDate',
+  'fullName',
+  'surname',
+  'dateOfBirth',
+  'gender',
+  'phone',
+  'email',
+  'address',
+  'batch',
+  'section',
+  'rollNo',
+  'guardianName',
+  'guardianRelation',
+  'guardianPhone',
+];
+
+export async function importStudents(_previous: FormState, form: FormData): Promise<FormState> {
+  const file = form.get('file');
+  if (!(file instanceof File) || file.size === 0) return { error: 'Choose a CSV file' };
+  if (file.size > 5_000_000) return { error: 'The file is too big (5 MB at most)' };
+  const rows = parseCsv(await file.text(), IMPORT_COLUMNS);
+  if (rows.length === 0) return { error: 'The file has no rows under its header' };
+  if (rows.length > 2000) return { error: 'At most 2000 students per file; split the file' };
+  const dryRun = form.get('dryRun') === 'on';
+
+  let result: {
+    ok: boolean;
+    total: number;
+    imported: number;
+    errors: { row: number; message: string }[];
+  };
+  try {
+    result = await api('/students/import', {
+      method: 'POST',
+      body: {
+        campusId: text(form, 'campusId'),
+        academicYearId: text(form, 'academicYearId'),
+        dryRun,
+        rows,
+      },
+    });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  if (result.errors.length > 0) {
+    const shown = result.errors
+      .slice(0, 30)
+      .map((e) => (e.row > 0 ? `Row ${e.row}: ${e.message}` : e.message))
+      .join(' · ');
+    const more = result.errors.length > 30 ? ` · and ${result.errors.length - 30} more` : '';
+    return { error: `Nothing was saved. Fix these and try again: ${shown}${more}` };
+  }
+  if (dryRun) {
+    return {
+      success: `Checked ${result.total} row(s): no problems. Untick "Only check" to import.`,
+    };
+  }
+  revalidatePath('/students');
+  return { success: `Imported ${result.imported} student(s).` };
+}
+
+export async function setNumbering(
+  institutionId: string,
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  let result: { pattern: string | null; example: string | null };
+  try {
+    result = await api(`/institutions/${institutionId}/admission-numbering`, {
+      method: 'PUT',
+      body: { pattern: text(form, 'pattern') ?? null },
+    });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath('/students/settings');
+  return {
+    success: result.example
+      ? `Saved. The first number will look like ${result.example}.`
+      : 'Saved: admission numbers are typed by hand.',
+  };
 }

@@ -81,8 +81,12 @@ export default async function AdmitStudentPage() {
                 ))}
               </Select>
             </Field>
-            <Field label="Admission no *" htmlFor="admissionNo" hint="Unique in the institution">
-              <Input id="admissionNo" name="admissionNo" required placeholder="SVJC260001" />
+            <Field
+              label="Admission no"
+              htmlFor="admissionNo"
+              hint="Leave empty to use the next number (if your institution has automatic numbering)"
+            >
+              <Input id="admissionNo" name="admissionNo" placeholder="SVJC260001" />
             </Field>
             <Field label="Admission date *" htmlFor="admissionDate">
               <Input id="admissionDate" name="admissionDate" type="date" required />
