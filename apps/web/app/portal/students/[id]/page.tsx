@@ -7,7 +7,7 @@ import { Badge, Card, CardContent, CardHeader, CardTitle, PageHeader } from '@ed
 import Link from 'next/link';
 import { api } from '../../../../lib/api';
 import { getMe } from '../../../../lib/me';
-import type { PortalAttendance, PortalStudent } from '../../../../lib/types';
+import type { PortalAttendance, PortalStudent, StudentDocument } from '../../../../lib/types';
 import { STATUS_LABEL } from '../../../(app)/attendance/labels';
 import { RELATIONS, sectionLabel } from '../../../(app)/students/labels';
 
@@ -23,6 +23,7 @@ export default async function PortalStudentPage({ params }: { params: Promise<{ 
         `/portal/students/${id}/attendance?${new URLSearchParams({ from, to })}`,
       )
     : null;
+  const documents = await api<StudentDocument[]>(`/portal/students/${id}/documents`);
   const current = student.enrolments[0];
 
   return (
@@ -103,6 +104,31 @@ export default async function PortalStudentPage({ params }: { params: Promise<{ 
           </Card>
         )}
       </div>
+
+      {documents.length > 0 && (
+        <Card className="mt-6 max-w-xl">
+          <CardHeader>
+            <CardTitle>Documents</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2 text-sm">
+            {documents.map((d) => (
+              <div key={d.id} className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">{d.documentType.name}</span>
+                {d.status === 'VERIFIED' && <Badge variant="success">Verified</Badge>}
+                {d.status === 'REJECTED' && (
+                  <Badge variant="destructive">Please give a new copy</Badge>
+                )}
+                <a
+                  href={`/portal/students/${id}/documents/${d.id}`}
+                  className="text-primary hover:underline"
+                >
+                  {d.file.originalName}
+                </a>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }

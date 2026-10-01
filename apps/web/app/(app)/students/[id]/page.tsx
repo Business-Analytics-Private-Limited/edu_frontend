@@ -31,7 +31,9 @@ import type {
   AcademicYear,
   Batch,
   Institution,
+  DocumentType,
   StudentAttendance,
+  StudentDocuments,
   StudentProfile,
 } from '../../../../lib/types';
 import {
@@ -48,6 +50,7 @@ import {
   updateStudent,
 } from '../actions';
 import { GENDERS, RELATIONS, sectionLabel, STUDENT_STATUSES } from '../labels';
+import { DocumentsCard } from './documents-card';
 
 const isoDate = (value: string) => value.slice(0, 10);
 
@@ -107,6 +110,15 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
           `/students/${student.id}/attendance?${new URLSearchParams({ from: since, to: until })}`,
         )
       : null;
+
+  // Documents (with the right to see them at this campus).
+  const canSeeDocuments = canAt(me, 'students.document.view', place);
+  const [documents, documentTypes] = canSeeDocuments
+    ? await Promise.all([
+        api<StudentDocuments>(`/students/${student.id}/documents`),
+        api<DocumentType[]>(`/document-types?institutionId=${student.institutionId}`),
+      ])
+    : [null, []];
 
   const yearsWithout = years.filter(
     (y) => y.status !== 'CLOSED' && !student.enrolments.some((e) => e.academicYear.id === y.id),
@@ -403,6 +415,19 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
             </ActionForm>
           </CardContent>
         </Card>
+      )}
+
+      {documents && (
+        <DocumentsCard
+          studentId={student.id}
+          data={documents}
+          types={documentTypes}
+          can={{
+            upload: canAt(me, 'students.document.create', place),
+            review: canAt(me, 'students.document.update', place),
+            delete: canAt(me, 'students.document.delete', place),
+          }}
+        />
       )}
 
       {/* --- Attendance ------------------------------------------------------------------------ */}

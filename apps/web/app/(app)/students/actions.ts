@@ -6,7 +6,7 @@
  */
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { api, errorMessage } from '../../../lib/api';
+import { api, apiUpload, errorMessage } from '../../../lib/api';
 import { parseCsv } from '../../../lib/csv';
 import type { FormState, StudentProfile } from '../../../lib/types';
 
@@ -372,4 +372,84 @@ export async function grantPortalAccess(id: string, _previous: FormState, form: 
 
 export async function revokePortalAccess(id: string, userId: string) {
   return forStudent(id, () => api(`/students/${id}/portal-access/${userId}`, { method: 'DELETE' }));
+}
+
+// --- Documents -----------------------------------------------------------------------------------
+
+/** Uploads the chosen file ("file") as the chosen type ("documentTypeId"). */
+export async function uploadDocument(id: string, _previous: FormState, form: FormData) {
+  const file = form.get('file');
+  if (!(file instanceof File) || file.size === 0) return { error: 'Choose a file' };
+  if (file.size > 5 * 1024 * 1024) return { error: 'The file is bigger than 5 MB' };
+  const body = new FormData();
+  body.set('documentTypeId', String(form.get('documentTypeId') ?? ''));
+  body.set('file', file, file.name);
+  return forStudent(id, () => apiUpload(`/students/${id}/documents`, body), 'Document uploaded');
+}
+
+/** Verify (no note needed) or reject (with the reason in "note"). */
+export async function reviewDocument(
+  id: string,
+  documentId: string,
+  status: 'VERIFIED' | 'REJECTED',
+  _previous: FormState,
+  form: FormData,
+) {
+  return forStudent(id, () =>
+    api(`/students/${id}/documents/${documentId}`, {
+      method: 'PATCH',
+      body: { status, note: text(form, 'note') },
+    }),
+  );
+}
+
+export async function deleteDocument(id: string, documentId: string) {
+  return forStudent(id, () => api(`/students/${id}/documents/${documentId}`, { method: 'DELETE' }));
+}
+
+// --- Document types (Student settings) -----------------------------------------------------------
+
+export async function createDocumentType(
+  institutionId: string,
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  try {
+    await api('/document-types', {
+      method: 'POST',
+      body: {
+        institutionId,
+        name: text(form, 'name'),
+        isRequired: form.get('isRequired') === 'on',
+        visibleInPortal: form.get('visibleInPortal') === 'on',
+      },
+    });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath('/students/settings');
+  return { success: 'Document type added' };
+}
+
+export async function updateDocumentType(
+  typeId: string,
+  change: { isRequired?: boolean; visibleInPortal?: boolean; isActive?: boolean },
+): Promise<FormState> {
+  try {
+    await api(`/document-types/${typeId}`, { method: 'PATCH', body: change });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath('/students/settings');
+  return {};
+}
+
+export async function deleteDocumentType(typeId: string): Promise<FormState> {
+  try {
+    await api(`/document-types/${typeId}`, { method: 'DELETE' });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath('/students/settings');
+  return {};
 }

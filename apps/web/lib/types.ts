@@ -466,3 +466,35 @@ export interface PortalAttendance {
   percentage: number | null;
   days: { date: string; status: AttendanceStatus; remark: string | null }[];
 }
+
+// --- Student documents ---------------------------------------------------------------------------
+
+export interface DocumentType {
+  id: string;
+  institutionId: string;
+  institution: { id: string; name: string };
+  name: string;
+  isRequired: boolean;
+  visibleInPortal: boolean;
+  isActive: boolean;
+  _count: { documents: number };
+}
+
+export interface StudentDocument {
+  id: string;
+  status: 'UPLOADED' | 'VERIFIED' | 'REJECTED';
+  note: string | null;
+  uploadedByName: string;
+  verifiedByName: string | null;
+  verifiedAt: string | null;
+  createdAt: string;
+  documentType: { id: string; name: string; visibleInPortal: boolean };
+  file: { id: string; originalName: string; mimeType: string; sizeBytes: number };
+}
+
+/** GET /students/:id/documents */
+export interface StudentDocuments {
+  documents: StudentDocument[];
+  /** Required types without an (accepted) document yet. */
+  missing: { id: string; name: string }[];
+}

@@ -7,6 +7,10 @@ const config: NextConfig = {
   poweredByHeader: false,
   // The ui package is TypeScript source; Next.js compiles it with the app.
   transpilePackages: ['@eduplatform/ui'],
+  experimental: {
+    // Student documents are uploaded through server actions: up to 5 MB per file (plus form data).
+    serverActions: { bodySizeLimit: '6mb' },
+  },
   async headers() {
     return [
       {

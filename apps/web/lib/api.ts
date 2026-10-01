@@ -64,3 +64,42 @@ export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) return error.message;
   return 'The server is not reachable. Is the backend running?';
 }
+
+/** Sends a form with a file (multipart) to the API, e.g. a student document. */
+export async function apiUpload<T = unknown>(path: string, form: FormData): Promise<T> {
+  const token = await getToken();
+  const response = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form, // fetch sets the multipart Content-Type with its boundary
+    cache: 'no-store',
+  });
+  if (response.status === 401) redirect('/logout');
+  const data = await response.json().catch(() => ({}));
+  if (response.status === 413) throw new ApiError(413, 'The file is bigger than 5 MB');
+  if (!response.ok) throw new ApiError(response.status, messageOf(data));
+  return data as T;
+}
+
+/**
+ * Passes a file download from the API through to the browser (route handlers), with the
+ * user's token, which never reaches the browser.
+ */
+export async function apiDownload(path: string): Promise<Response> {
+  const token = await getToken();
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  if (!response.ok || !response.body) {
+    return new Response(response.status === 404 ? 'File not found' : 'Not allowed', {
+      status: response.status === 404 ? 404 : 403,
+    });
+  }
+  const headers = new Headers();
+  for (const name of ['content-type', 'content-length', 'content-disposition', 'cache-control']) {
+    const value = response.headers.get(name);
+    if (value) headers.set(name, value);
+  }
+  return new Response(response.body, { status: 200, headers });
+}
