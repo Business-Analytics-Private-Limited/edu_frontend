@@ -7,12 +7,14 @@
 import { AppShell, Button, UserBadge, type NavItem } from '@eduplatform/ui';
 import {
   ArrowLeftRight,
+  BarChart3,
   ArrowUpRight,
   BookOpen,
   Building,
   Building2,
   CalendarDays,
   CalendarOff,
+  ClipboardCheck,
   GraduationCap,
   History,
   KeyRound,
@@ -89,6 +91,28 @@ const STUDENTS_MENU: (NavItem & { permission: string })[] = [
   },
 ];
 
+/** The Attendance menu: only when the organization has the Attendance module. */
+const ATTENDANCE_MENU: (NavItem & { permission: string })[] = [
+  {
+    href: '/attendance',
+    label: 'Attendance',
+    icon: <ClipboardCheck />,
+    permission: 'attendance.record.view',
+  },
+  {
+    href: '/attendance/report',
+    label: 'Reports',
+    icon: <BarChart3 />,
+    permission: 'attendance.report.view',
+  },
+  {
+    href: '/attendance/settings',
+    label: 'Attendance settings',
+    icon: <Settings />,
+    permission: 'attendance.policy.update',
+  },
+];
+
 /** The Academic menu: only when the organization has the Academic module (and the permission). */
 const ACADEMIC_MENU: (NavItem & { permission: string })[] = [
   {
@@ -129,6 +153,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const students = me.enabledModules.includes('students')
     ? STUDENTS_MENU.filter((item) => can(me, item.permission))
     : [];
+  const attendance = me.enabledModules.includes('attendance')
+    ? ATTENDANCE_MENU.filter((item) => can(me, item.permission))
+    : [];
   const academic = me.enabledModules.includes('academic')
     ? ACADEMIC_MENU.filter((item) => can(me, item.permission))
     : [];
@@ -139,6 +166,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       sections={[
         { items },
         ...(students.length > 0 ? [{ title: 'Students', items: students }] : []),
+        ...(attendance.length > 0 ? [{ title: 'Attendance', items: attendance }] : []),
         ...(academic.length > 0 ? [{ title: 'Academic', items: academic }] : []),
         {
           title: 'Account',

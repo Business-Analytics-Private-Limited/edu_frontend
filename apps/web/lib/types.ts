@@ -78,6 +78,9 @@ export interface Institution {
   campuses: { id: string; name: string; code: string }[];
   /** Students module: how admission numbers are made, e.g. "{CODE}{YY}{SEQ:4}"; null = by hand. */
   admissionNoPattern?: string | null;
+  /** Attendance: the institution's time zone and correction window (days). */
+  timeZone?: string;
+  attendanceCorrectionDays?: number;
   _count: { campuses: number };
 }
 
@@ -330,4 +333,81 @@ export interface PromotionRun {
   graduated: number;
   createdAt: string;
   undoneAt: string | null;
+}
+
+// --- Attendance module ---------------------------------------------------------------------------
+
+export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'HALF_DAY' | 'ON_LEAVE';
+export type AttendanceCounts = Record<AttendanceStatus, number>;
+
+/** GET /attendance/roster */
+export interface Roster {
+  date: string;
+  today: string;
+  section: { id: string; name: string; campusId: string };
+  academicYear: { id: string; name: string } | null;
+  workingDay: boolean;
+  reason: string | null;
+  marked: boolean;
+  lastMarkedBy: { name: string; at: string } | null;
+  /** Why the day can't be marked, or null. */
+  blocked: string | null;
+  students: {
+    studentId: string;
+    fullName: string;
+    admissionNo: string;
+    rollNo: string | null;
+    status: AttendanceStatus | null;
+    remark: string | null;
+    corrected: boolean;
+  }[];
+}
+
+/** GET /attendance/daily-summary */
+export interface DailySummary {
+  date: string;
+  today: string;
+  campus: { id: string; name: string };
+  academicYear: { id: string; name: string } | null;
+  workingDay: boolean;
+  reason: string | null;
+  sections: {
+    section: { id: string; name: string };
+    students: number;
+    marked: boolean;
+    counts: AttendanceCounts;
+  }[];
+}
+
+/** GET /attendance/section-report */
+export interface SectionReport {
+  section: { id: string; name: string };
+  from: string;
+  to: string;
+  workingDays: number;
+  markedDays: number;
+  unmarkedDays: number;
+  students: {
+    studentId: string;
+    fullName: string;
+    admissionNo: string;
+    rollNo: string | null;
+    counts: AttendanceCounts;
+    percentage: number | null;
+  }[];
+}
+
+/** GET /students/:id/attendance */
+export interface StudentAttendance {
+  from: string;
+  to: string;
+  counts: AttendanceCounts;
+  percentage: number | null;
+  days: {
+    date: string;
+    status: AttendanceStatus;
+    remark: string | null;
+    corrected: boolean;
+    correctionReason: string | null;
+  }[];
 }

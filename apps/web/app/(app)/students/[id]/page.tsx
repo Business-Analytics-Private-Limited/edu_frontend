@@ -27,7 +27,13 @@ import {
 import { api } from '../../../../lib/api';
 import { can, canAt, getMe } from '../../../../lib/me';
 import { sectionOptions } from '../../../../lib/sections';
-import type { AcademicYear, Batch, Institution, StudentProfile } from '../../../../lib/types';
+import type {
+  AcademicYear,
+  Batch,
+  Institution,
+  StudentAttendance,
+  StudentProfile,
+} from '../../../../lib/types';
 import {
   addGuardian,
   changeStatus,
@@ -89,6 +95,16 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
   const targetCampuses = hasCurrentSection
     ? otherCampuses.filter((c) => otherSections.some((s) => s.campusId === c.id))
     : otherCampuses;
+
+  // Attendance of the last 30 days (Attendance module).
+  const until = new Date().toISOString().slice(0, 10);
+  const since = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
+  const attendance =
+    me.enabledModules.includes('attendance') && canAt(me, 'attendance.record.view', place)
+      ? await api<StudentAttendance>(
+          `/students/${student.id}/attendance?${new URLSearchParams({ from: since, to: until })}`,
+        )
+      : null;
 
   const yearsWithout = years.filter(
     (y) => y.status !== 'CLOSED' && !student.enrolments.some((e) => e.academicYear.id === y.id),
@@ -383,6 +399,41 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
                 </Field>
               </div>
             </ActionForm>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* --- Attendance ------------------------------------------------------------------------ */}
+      {attendance && (
+        <Card className="mt-6 max-w-xl">
+          <CardHeader>
+            <CardTitle>Attendance, last 30 days</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2 text-sm">
+            <p>
+              {attendance.percentage === null ? (
+                <span className="text-muted-foreground">Nothing marked yet.</span>
+              ) : (
+                <Badge variant={attendance.percentage >= 75 ? 'success' : 'destructive'}>
+                  {attendance.percentage}%
+                </Badge>
+              )}
+              <span className="ml-2 text-muted-foreground">
+                Present {attendance.counts.PRESENT} · Absent {attendance.counts.ABSENT} · Late{' '}
+                {attendance.counts.LATE} · Half day {attendance.counts.HALF_DAY} · Leave{' '}
+                {attendance.counts.ON_LEAVE}
+              </span>
+            </p>
+            {attendance.days
+              .filter((d) => d.status !== 'PRESENT')
+              .slice(0, 10)
+              .map((d) => (
+                <p key={d.date} className="text-xs text-muted-foreground">
+                  {d.date}: {d.status.replace('_', ' ').toLowerCase()}
+                  {d.remark ? ` (${d.remark})` : ''}
+                  {d.corrected && d.correctionReason ? ` · corrected: ${d.correctionReason}` : ''}
+                </p>
+              ))}
           </CardContent>
         </Card>
       )}
