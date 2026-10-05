@@ -129,7 +129,7 @@ export interface Role {
 export interface AuditLog {
   id: string;
   actorType: string;
-  actorId: string;
+  actorId: string | null;
   actorName: string | null;
   institutionId: string | null;
   campusId: string | null;

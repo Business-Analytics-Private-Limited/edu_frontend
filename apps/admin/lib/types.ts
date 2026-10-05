@@ -76,3 +76,21 @@ export interface PredefinedRole {
 
 /** What a form's server action returns: a message to show, or nothing. */
 export type { FormState, PermissionResource } from '@eduplatform/ui';
+
+/** One entry of the audit log, as the super admin sees it (ADR-0027). */
+export interface PlatformAuditEntry {
+  id: string;
+  organizationId: string | null;
+  organizationName: string | null;
+  /** "super_admin", "user", or "unknown" (a failed login with an email that belongs to nobody). */
+  actorType: string;
+  actorId: string | null;
+  actorName: string | null;
+  institutionId: string | null;
+  campusId: string | null;
+  action: string;
+  entity: string;
+  entityId: string | null;
+  details: Record<string, unknown> | null;
+  createdAt: string;
+}
