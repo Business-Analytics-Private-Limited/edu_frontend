@@ -1,14 +1,18 @@
 /**
- * /organizations/:id: one organization. Shows its details and admins,
- * lets the super admin switch modules on/off and suspend / activate it.
+ * /organizations/:id: one organization. Shows its details and admins, lets the super admin
+ * switch modules on/off, suspend / activate it, and add or delete its institutions (only the
+ * super admin does that, ADR-0025).
  */
 import {
+  ActionForm,
   Badge,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  Field,
+  Input,
   PageHeader,
   Table,
   TableHead,
@@ -17,6 +21,7 @@ import {
 } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
 import type { OrganizationDetail } from '../../../../lib/types';
+import { addInstitution, deleteInstitution } from '../actions';
 import { ModuleSwitch } from './module-switch';
 import { StatusButton } from './status-button';
 
@@ -82,6 +87,85 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
                 enabled={module.enabled}
               />
             ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      <h2 className="mb-3 mt-8 text-lg font-semibold">Institutions</h2>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Table>
+            <TableHead>
+              <tr>
+                <Th>Name</Th>
+                <Th>Code</Th>
+                <Th>Campuses</Th>
+                <Th />
+              </tr>
+            </TableHead>
+            <tbody>
+              {org.institutions.map((institution) => (
+                <tr key={institution.id}>
+                  <Td className="font-medium">{institution.name}</Td>
+                  <Td>{institution.code}</Td>
+                  <Td>{institution._count.campuses}</Td>
+                  <Td className="text-right">
+                    {institution._count.campuses === 0 && (
+                      <ActionForm
+                        action={deleteInstitution.bind(null, org.id, institution.id)}
+                        submitLabel="Delete"
+                        pendingLabel="Deleting…"
+                        confirmMessage={`Delete ${institution.name}? Only an empty institution can be deleted.`}
+                        submitVariant="ghost"
+                        submitSize="sm"
+                      />
+                    )}
+                  </Td>
+                </tr>
+              ))}
+              {org.institutions.length === 0 && (
+                <tr>
+                  <Td colSpan={4} className="py-8 text-center text-muted-foreground">
+                    No institutions yet.
+                  </Td>
+                </tr>
+              )}
+            </tbody>
+          </Table>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Add institution</CardTitle>
+            <CardDescription>
+              The organization&apos;s admin then adds its campuses and sets up its class levels.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ActionForm
+              action={addInstitution.bind(null, org.id)}
+              submitLabel="Add institution"
+              resetOnSuccess
+            >
+              <Field label="Name" htmlFor="name">
+                <Input
+                  id="name"
+                  name="name"
+                  required
+                  minLength={2}
+                  placeholder="Sri Vidya Degree College"
+                />
+              </Field>
+              <Field label="Code" htmlFor="code" hint="Capital letters, digits, _ and -">
+                <Input
+                  id="code"
+                  name="code"
+                  required
+                  pattern="[A-Za-z0-9_\-]{2,20}"
+                  placeholder="SVDC"
+                />
+              </Field>
+            </ActionForm>
           </CardContent>
         </Card>
       </div>

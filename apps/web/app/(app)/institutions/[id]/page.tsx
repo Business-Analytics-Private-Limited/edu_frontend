@@ -1,7 +1,8 @@
 /**
  * /institutions/:id: one institution and its campuses.
- * Each button needs its own permission AT THIS PLACE: platform.institution.update / .delete for
- * the institution, platform.campus.create / .update / .delete for campuses. A Campus admin sees
+ * Each button needs its own permission AT THIS PLACE: platform.institution.update to rename the
+ * institution, platform.campus.create / .update / .delete for campuses. Deleting an institution
+ * is for the super admin only (ADR-0025). A Campus admin sees
  * only their own campus here (the API sends only the campuses they may see).
  */
 import {
@@ -13,7 +14,6 @@ import {
   Field,
   Input,
   PageHeader,
-  Select,
   Table,
   TableHead,
   Td,
@@ -21,14 +21,8 @@ import {
 } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
 import { canAt, getMe } from '../../../../lib/me';
-import { INSTITUTION_TYPES, type InstitutionDetail } from '../../../../lib/types';
-import {
-  createCampus,
-  deleteCampus,
-  deleteInstitution,
-  renameCampus,
-  updateInstitution,
-} from '../actions';
+import type { InstitutionDetail } from '../../../../lib/types';
+import { createCampus, deleteCampus, renameCampus, updateInstitution } from '../actions';
 
 export default async function InstitutionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -39,28 +33,12 @@ export default async function InstitutionPage({ params }: { params: Promise<{ id
   const here = { institutionId: institution.id };
   const atCampus = (campusId: string) => ({ institutionId: institution.id, campusId });
   const canEdit = canAt(me, 'platform.institution.update', here);
-  const canDelete = canAt(me, 'platform.institution.delete', here);
   const canAddCampus = canAt(me, 'platform.campus.create', here);
   const canDeleteCampus = canAt(me, 'platform.campus.delete', here);
 
   return (
     <>
-      <PageHeader
-        title={institution.name}
-        description={`${institution.code} · ${INSTITUTION_TYPES[institution.type]}`}
-        actions={
-          canDelete && (
-            <ActionForm
-              action={deleteInstitution.bind(null, institution.id)}
-              submitLabel="Delete institution"
-              pendingLabel="Deleting…"
-              confirmMessage="Delete this institution? Its campuses must be deleted first."
-              submitVariant="destructive"
-              submitSize="sm"
-            />
-          )
-        }
-      />
+      <PageHeader title={institution.name} description={`Code: ${institution.code}`} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -161,7 +139,7 @@ export default async function InstitutionPage({ params }: { params: Promise<{ id
           {canEdit && (
             <Card>
               <CardHeader>
-                <CardTitle>Edit institution</CardTitle>
+                <CardTitle>Rename institution</CardTitle>
               </CardHeader>
               <CardContent>
                 <ActionForm
@@ -176,15 +154,6 @@ export default async function InstitutionPage({ params }: { params: Promise<{ id
                       required
                       minLength={2}
                     />
-                  </Field>
-                  <Field label="Type" htmlFor="type">
-                    <Select id="type" name="type" defaultValue={institution.type}>
-                      {Object.entries(INSTITUTION_TYPES).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </Select>
                   </Field>
                 </ActionForm>
               </CardContent>

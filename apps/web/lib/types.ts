@@ -58,14 +58,6 @@ export interface OwnOrganization {
   modules: { key: string; name: string }[];
 }
 
-export const INSTITUTION_TYPES = {
-  JUNIOR_COLLEGE: 'Junior college',
-  DEGREE_COLLEGE: 'Degree college',
-  ENGINEERING_COLLEGE: 'Engineering college',
-  SCHOOL: 'School',
-} as const;
-export type InstitutionType = keyof typeof INSTITUTION_TYPES;
-
 export interface Campus {
   id: string;
   institutionId: string;
@@ -73,11 +65,11 @@ export interface Campus {
   code: string;
 }
 
+/** A college or school. Added by the super admin only; it has no type (ADR-0025). */
 export interface Institution {
   id: string;
   name: string;
   code: string;
-  type: InstitutionType;
   /** Only the campuses the user may see. */
   campuses: { id: string; name: string; code: string }[];
   /** Students module: how admission numbers are made, e.g. "{CODE}{YY}{SEQ:4}"; null = by hand. */

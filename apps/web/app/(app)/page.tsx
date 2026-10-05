@@ -67,11 +67,6 @@ export default async function DashboardPage() {
 
   const actions = [
     { href: '/users/new', label: 'Add a user', show: can(me, 'access.user.create') },
-    {
-      href: '/institutions',
-      label: 'Add an institution',
-      show: canAt(me, 'platform.institution.create', {}),
-    },
     { href: '/roles/new', label: 'Create a role', show: canAt(me, 'access.role.create', {}) },
     { href: '/audit', label: 'See recent changes', show: can(me, 'audit.log.view') },
     { href: '/account', label: 'Change my password', show: true },

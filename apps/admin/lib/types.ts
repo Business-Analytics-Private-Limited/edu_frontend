@@ -37,6 +37,8 @@ export interface Module {
 export interface OrganizationDetail extends Organization {
   _count: { users: number; institutions: number; campuses: number; roles: number };
   admins: { id: string; name: string; email: string; status: string; lastLoginAt: string | null }[];
+  /** Only the super admin adds and deletes institutions (ADR-0025). */
+  institutions: { id: string; name: string; code: string; _count: { campuses: number } }[];
   modules: (Module & { enabled: boolean })[];
 }
 
