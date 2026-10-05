@@ -26,6 +26,7 @@ import { api } from '../../../../lib/api';
 import { can, canAt, getMe } from '../../../../lib/me';
 import type { Calendar, Institution } from '../../../../lib/types';
 import { createHoliday, deleteHoliday, setWeeklyOff } from '../actions';
+import { campusesInUse } from '../../../../lib/places';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -37,12 +38,12 @@ export default async function CalendarPage() {
   ]);
   const institutionName = new Map(calendar.institutions.map((i) => [i.id, i.name]));
 
-  // Where the user may add holidays: whole institutions and single campuses.
+  // Where the user may add holidays: whole institutions and single campuses, all in use.
   const places = institutions.flatMap((i) => [
-    ...(canAt(me, 'academic.calendar.create', { institutionId: i.id })
+    ...(i.status === 'ACTIVE' && canAt(me, 'academic.calendar.create', { institutionId: i.id })
       ? [{ value: `institution:${i.id}`, label: `${i.name} (all campuses)` }]
       : []),
-    ...i.campuses
+    ...campusesInUse(i)
       .filter((c) => canAt(me, 'academic.calendar.create', { institutionId: i.id, campusId: c.id }))
       .map((c) => ({ value: `campus:${i.id}:${c.id}`, label: `${c.name} (${i.name})` })),
   ]);

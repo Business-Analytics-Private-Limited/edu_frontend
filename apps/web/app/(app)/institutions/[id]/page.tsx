@@ -1,12 +1,15 @@
 /**
  * /institutions/:id: one institution and its campuses.
  * Each button needs its own permission AT THIS PLACE: platform.institution.update to rename the
- * institution, platform.campus.create / .update / .delete for campuses. Deleting an institution
- * is for the super admin only (ADR-0025). A Campus admin sees
+ * institution, platform.campus.create / .update for campuses, platform.campus.delete to
+ * DEACTIVATE (close) a campus. Activating a closed campus again, and really deleting an empty
+ * one, is for the Organization admin only (ADR-0026). Deleting an institution is for the super
+ * admin only (ADR-0025). A Campus admin sees
  * only their own campus here (the API sends only the campuses they may see).
  */
 import {
   ActionForm,
+  Badge,
   Card,
   CardContent,
   CardHeader,
@@ -22,7 +25,14 @@ import {
 import { api } from '../../../../lib/api';
 import { canAt, getMe } from '../../../../lib/me';
 import type { InstitutionDetail } from '../../../../lib/types';
-import { createCampus, deleteCampus, renameCampus, updateInstitution } from '../actions';
+import {
+  activateCampus,
+  createCampus,
+  deactivateCampus,
+  deleteCampus,
+  renameCampus,
+  updateInstitution,
+} from '../actions';
 
 export default async function InstitutionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -34,11 +44,24 @@ export default async function InstitutionPage({ params }: { params: Promise<{ id
   const atCampus = (campusId: string) => ({ institutionId: institution.id, campusId });
   const canEdit = canAt(me, 'platform.institution.update', here);
   const canAddCampus = canAt(me, 'platform.campus.create', here);
-  const canDeleteCampus = canAt(me, 'platform.campus.delete', here);
+  const canDeactivate = (campusId: string) =>
+    canAt(me, 'platform.campus.delete', atCampus(campusId));
+  const showActions = me.isOrganizationAdmin || canAt(me, 'platform.campus.delete', here);
+  const closed = institution.status !== 'ACTIVE';
 
   return (
     <>
-      <PageHeader title={institution.name} description={`Code: ${institution.code}`} />
+      <PageHeader
+        title={institution.name}
+        description={`Code: ${institution.code}`}
+        actions={closed && <Badge variant="outline">Inactive</Badge>}
+      />
+      {closed && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          This institution is inactive: its records can be read, but nothing new can be added.
+          EduPlatform can activate it again.
+        </p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -48,7 +71,8 @@ export default async function InstitutionPage({ params }: { params: Promise<{ id
               <tr>
                 <Th>Name</Th>
                 <Th>Code</Th>
-                {canDeleteCampus && <Th />}
+                <Th>Status</Th>
+                {showActions && <Th />}
               </tr>
             </TableHead>
             <tbody>
@@ -76,23 +100,51 @@ export default async function InstitutionPage({ params }: { params: Promise<{ id
                     )}
                   </Td>
                   <Td>{campus.code}</Td>
-                  {canDeleteCampus && (
-                    <Td className="text-right">
-                      <ActionForm
-                        action={deleteCampus.bind(null, institution.id, campus.id)}
-                        submitLabel="Delete"
-                        pendingLabel="Deleting…"
-                        confirmMessage={`Delete campus ${campus.name}?`}
-                        submitVariant="ghost"
-                        submitSize="sm"
-                      />
+                  <Td>
+                    <Badge variant={campus.status === 'ACTIVE' ? 'success' : 'outline'}>
+                      {campus.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </Td>
+                  {showActions && (
+                    <Td>
+                      <div className="flex justify-end gap-1">
+                        {campus.status === 'ACTIVE' && canDeactivate(campus.id) && (
+                          <ActionForm
+                            action={deactivateCampus.bind(null, institution.id, campus.id)}
+                            submitLabel="Deactivate"
+                            pendingLabel="…"
+                            confirmMessage={`Deactivate ${campus.name}? Its records are kept and can still be read, but nothing new can be added there, and staff roles at this campus stop working. Only the Organization admin can activate it again.`}
+                            submitVariant="outline"
+                            submitSize="sm"
+                          />
+                        )}
+                        {campus.status === 'INACTIVE' && me.isOrganizationAdmin && !closed && (
+                          <ActionForm
+                            action={activateCampus.bind(null, institution.id, campus.id)}
+                            submitLabel="Activate"
+                            pendingLabel="…"
+                            submitVariant="outline"
+                            submitSize="sm"
+                          />
+                        )}
+                        {me.isOrganizationAdmin && (
+                          <ActionForm
+                            action={deleteCampus.bind(null, institution.id, campus.id)}
+                            submitLabel="Delete"
+                            pendingLabel="…"
+                            confirmMessage={`Delete ${campus.name} for good? Only an empty campus (no classes, students or holidays) can be deleted; otherwise deactivate it.`}
+                            submitVariant="ghost"
+                            submitSize="sm"
+                          />
+                        )}
+                      </div>
                     </Td>
                   )}
                 </tr>
               ))}
               {institution.campuses.length === 0 && (
                 <tr>
-                  <Td colSpan={3} className="py-8 text-center text-muted-foreground">
+                  <Td colSpan={5} className="py-8 text-center text-muted-foreground">
                     No campuses yet.
                   </Td>
                 </tr>
@@ -102,7 +154,7 @@ export default async function InstitutionPage({ params }: { params: Promise<{ id
         </div>
 
         <div className="flex flex-col gap-6">
-          {canAddCampus && (
+          {canAddCampus && !closed && (
             <Card>
               <CardHeader>
                 <CardTitle>Add campus</CardTitle>

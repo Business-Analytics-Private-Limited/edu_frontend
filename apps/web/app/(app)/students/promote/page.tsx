@@ -32,6 +32,7 @@ import type {
   PromotionRun,
 } from '../../../../lib/types';
 import { applyPromotion, undoPromotion } from '../actions';
+import { campusesInUse } from '../../../../lib/places';
 
 export default async function PromotePage({
   searchParams,
@@ -45,7 +46,7 @@ export default async function PromotePage({
     can(me, 'academic.year.view') ? api<AcademicYear[]>('/academic-years') : [],
   ]);
   const campuses = institutions.flatMap((i) =>
-    i.campuses
+    campusesInUse(i)
       .filter((c) =>
         canAt(me, 'students.enrolment.promote', { institutionId: i.id, campusId: c.id }),
       )

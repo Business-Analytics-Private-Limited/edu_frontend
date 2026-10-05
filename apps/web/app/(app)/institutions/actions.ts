@@ -62,6 +62,32 @@ export async function renameCampus(
   return {};
 }
 
+/** Closes a campus (ADR-0026): records stay, nothing new happens there. */
+export async function deactivateCampus(
+  institutionId: string,
+  campusId: string,
+): Promise<FormState> {
+  try {
+    await api(`/campuses/${campusId}/deactivate`, { method: 'POST' });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath(`/institutions/${institutionId}`);
+  return {};
+}
+
+/** Opens a closed campus again (Organization admin only). */
+export async function activateCampus(institutionId: string, campusId: string): Promise<FormState> {
+  try {
+    await api(`/campuses/${campusId}/activate`, { method: 'POST' });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath(`/institutions/${institutionId}`);
+  return {};
+}
+
+/** Really deletes an EMPTY campus, e.g. added by mistake (Organization admin only). */
 export async function deleteCampus(institutionId: string, campusId: string): Promise<FormState> {
   try {
     await api(`/campuses/${campusId}`, { method: 'DELETE' });

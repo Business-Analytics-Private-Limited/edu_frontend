@@ -58,8 +58,18 @@ export default async function DashboardPage() {
   const scope = wholeOrganization ? 'in your organization' : 'in your institutions / campuses';
 
   const numbers = [
-    { label: 'Institutions', value: data.institutions, show: true },
-    { label: 'Campuses', value: data.campuses, show: true },
+    {
+      label: 'Institutions',
+      value: data.institutions,
+      note: data.inactiveInstitutions ? `${data.inactiveInstitutions} inactive` : undefined,
+      show: true,
+    },
+    {
+      label: 'Campuses',
+      value: data.campuses,
+      note: data.inactiveCampuses ? `${data.inactiveCampuses} inactive` : undefined,
+      show: true,
+    },
     { label: 'Users', value: data.users, show: can(me, 'access.user.view') },
     { label: 'Active users', value: data.activeUsers, show: can(me, 'access.user.view') },
     { label: 'Roles', value: data.roles, show: can(me, 'access.role.view') },
@@ -84,7 +94,12 @@ export default async function DashboardPage() {
                 {item.label}
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-3xl font-semibold">{item.value}</CardContent>
+            <CardContent>
+              <span className="text-3xl font-semibold">{item.value}</span>
+              {'note' in item && item.note && (
+                <span className="ml-2 text-sm text-muted-foreground">{item.note}</span>
+              )}
+            </CardContent>
           </Card>
         ))}
       </div>

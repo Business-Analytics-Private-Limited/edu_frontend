@@ -3,7 +3,7 @@
  * Institutions are added by EduPlatform (the super admin) only (ADR-0025); open one to add
  * campuses or rename it.
  */
-import { PageHeader, Table, TableHead, Td, Th } from '@eduplatform/ui';
+import { Badge, PageHeader, Table, TableHead, Td, Th } from '@eduplatform/ui';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
 import type { Institution } from '../../../lib/types';
@@ -36,9 +36,22 @@ export default async function InstitutionsPage() {
                 >
                   {institution.name}
                 </Link>
+                {institution.status !== 'ACTIVE' && (
+                  <Badge variant="outline" className="ml-2">
+                    Inactive
+                  </Badge>
+                )}
               </Td>
               <Td>{institution.code}</Td>
-              <Td>{institution._count.campuses}</Td>
+              <Td>
+                {institution.campuses.filter((c) => c.status === 'ACTIVE').length}
+                {institution.campuses.some((c) => c.status !== 'ACTIVE') && (
+                  <span className="text-muted-foreground">
+                    {' '}
+                    (+{institution.campuses.filter((c) => c.status !== 'ACTIVE').length} inactive)
+                  </span>
+                )}
+              </Td>
             </tr>
           ))}
           {institutions.length === 0 && (

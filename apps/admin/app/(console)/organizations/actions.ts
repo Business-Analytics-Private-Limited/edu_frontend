@@ -119,3 +119,23 @@ export async function deleteInstitution(
   revalidatePath(`/organizations/${organizationId}`);
   return {};
 }
+
+/** Closes or reopens an institution (ADR-0026). */
+export async function setInstitutionStatus(
+  organizationId: string,
+  institutionId: string,
+  action: 'deactivate' | 'activate',
+): Promise<FormState> {
+  try {
+    await api(
+      `/super-admin/organizations/${organizationId}/institutions/${institutionId}/${action}`,
+      {
+        method: 'POST',
+      },
+    );
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : `Could not ${action} it` };
+  }
+  revalidatePath(`/organizations/${organizationId}`);
+  return {};
+}

@@ -1,6 +1,6 @@
 /**
  * PLACES on the user screens: where a role applies (the whole organization, one institution or
- * one campus).
+ * one campus). Closed campuses and institutions are not offered (ADR-0026).
  *
  *   <PlaceSelect institutions={institutions} me={me} permission="access.user.create" />
  *     a drop-down with only the places where you may add staff; its value is
@@ -13,6 +13,7 @@
 import { Field, Select } from '@eduplatform/ui';
 import { canAt } from '../../../lib/me';
 import type { Institution, Me, Role, RoleAssignment } from '../../../lib/types';
+import { campusesInUse } from '../../../lib/places';
 
 export function PlaceSelect({
   institutions,
@@ -27,24 +28,26 @@ export function PlaceSelect({
     <Field label="Where" htmlFor="place" hint="The role applies only here">
       <Select id="place" name="place" required>
         {canAt(me, permission, {}) && <option value="">Whole organization</option>}
-        {institutions.map((institution) => (
-          <optgroup key={institution.id} label={institution.name}>
-            {canAt(me, permission, { institutionId: institution.id }) && (
-              <option value={`institution:${institution.id}`}>
-                {institution.name} (all campuses)
-              </option>
-            )}
-            {institution.campuses
-              .filter((campus) =>
-                canAt(me, permission, { institutionId: institution.id, campusId: campus.id }),
-              )
-              .map((campus) => (
-                <option key={campus.id} value={`campus:${campus.id}`}>
-                  {campus.name}
+        {institutions
+          .filter((institution) => institution.status === 'ACTIVE')
+          .map((institution) => (
+            <optgroup key={institution.id} label={institution.name}>
+              {canAt(me, permission, { institutionId: institution.id }) && (
+                <option value={`institution:${institution.id}`}>
+                  {institution.name} (all campuses)
                 </option>
-              ))}
-          </optgroup>
-        ))}
+              )}
+              {campusesInUse(institution)
+                .filter((campus) =>
+                  canAt(me, permission, { institutionId: institution.id, campusId: campus.id }),
+                )
+                .map((campus) => (
+                  <option key={campus.id} value={`campus:${campus.id}`}>
+                    {campus.name}
+                  </option>
+                ))}
+            </optgroup>
+          ))}
       </Select>
     </Field>
   );

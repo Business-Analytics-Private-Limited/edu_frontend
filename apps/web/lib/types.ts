@@ -22,6 +22,8 @@ export interface Me {
   /** Everything the user may do somewhere; `grants` says where. */
   permissions: string[];
   grants: Grant[];
+  /** Has the Organization admin role for the whole organization (may activate campuses). */
+  isOrganizationAdmin: boolean;
   enabledModules: string[];
 }
 
@@ -40,8 +42,11 @@ export interface Place {
 }
 
 export interface Dashboard {
+  /** Active ones; closed ones are counted separately (ADR-0026). */
   institutions: number;
+  inactiveInstitutions: number;
   campuses: number;
+  inactiveCampuses: number;
   users: number;
   activeUsers: number;
   roles: number;
@@ -58,11 +63,15 @@ export interface OwnOrganization {
   modules: { key: string; name: string }[];
 }
 
+/** INACTIVE = closed: records stay readable, nothing new happens there (ADR-0026). */
+export type PlaceStatus = 'ACTIVE' | 'INACTIVE';
+
 export interface Campus {
   id: string;
   institutionId: string;
   name: string;
   code: string;
+  status: PlaceStatus;
 }
 
 /** A college or school. Added by the super admin only; it has no type (ADR-0025). */
@@ -70,8 +79,9 @@ export interface Institution {
   id: string;
   name: string;
   code: string;
-  /** Only the campuses the user may see. */
-  campuses: { id: string; name: string; code: string }[];
+  status: PlaceStatus;
+  /** Only the campuses the user may see, closed ones included. */
+  campuses: { id: string; name: string; code: string; status: PlaceStatus }[];
   /** Students module: how admission numbers are made, e.g. "{CODE}{YY}{SEQ:4}"; null = by hand. */
   admissionNoPattern?: string | null;
   /** Attendance: the institution's time zone and correction window (days). */

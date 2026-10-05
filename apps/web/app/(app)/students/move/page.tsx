@@ -20,6 +20,7 @@ import { can, canAt, getMe } from '../../../../lib/me';
 import { sectionOptions } from '../../../../lib/sections';
 import type { AcademicYear, Institution, Page, StudentListItem } from '../../../../lib/types';
 import { moveStudents } from '../actions';
+import { campusesInUse } from '../../../../lib/places';
 
 export default async function MoveStudentsPage({
   searchParams,
@@ -33,7 +34,7 @@ export default async function MoveStudentsPage({
     can(me, 'academic.year.view') ? api<AcademicYear[]>('/academic-years') : [],
   ]);
   const campuses = institutions.flatMap((i) =>
-    i.campuses
+    campusesInUse(i)
       .filter((c) =>
         canAt(me, 'students.enrolment.transfer', { institutionId: i.id, campusId: c.id }),
       )

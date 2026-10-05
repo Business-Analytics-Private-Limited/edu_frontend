@@ -23,6 +23,7 @@ import { sectionOptions } from '../../../../lib/sections';
 import type { AcademicYear, Batch, Institution } from '../../../../lib/types';
 import { admitStudent } from '../actions';
 import { GENDERS, RELATIONS } from '../labels';
+import { campusesInUse } from '../../../../lib/places';
 
 export default async function AdmitStudentPage() {
   const me = await getMe();
@@ -30,7 +31,7 @@ export default async function AdmitStudentPage() {
     ? await api<Institution[]>('/institutions')
     : [];
   const campuses = institutions.flatMap((i) =>
-    i.campuses
+    campusesInUse(i)
       .filter((c) => canAt(me, 'students.student.create', { institutionId: i.id, campusId: c.id }))
       .map((c) => ({ ...c, institution: i })),
   );

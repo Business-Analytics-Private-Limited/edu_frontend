@@ -1,7 +1,8 @@
 /**
  * /organizations/:id: one organization. Shows its details and admins, lets the super admin
- * switch modules on/off, suspend / activate it, and add or delete its institutions (only the
- * super admin does that, ADR-0025).
+ * switch modules on/off, suspend / activate it, and add, deactivate / activate or delete its
+ * institutions (only the super admin does that, ADR-0025 and ADR-0026). Delete is only offered
+ * for an institution without campuses; anything else is deactivated.
  */
 import {
   ActionForm,
@@ -21,7 +22,7 @@ import {
 } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
 import type { OrganizationDetail } from '../../../../lib/types';
-import { addInstitution, deleteInstitution } from '../actions';
+import { addInstitution, deleteInstitution, setInstitutionStatus } from '../actions';
 import { ModuleSwitch } from './module-switch';
 import { StatusButton } from './status-button';
 
@@ -60,7 +61,10 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
               <dt className="text-muted-foreground">Institutions</dt>
               <dd>{org._count.institutions}</dd>
               <dt className="text-muted-foreground">Campuses</dt>
-              <dd>{org._count.campuses}</dd>
+              <dd>
+                {org.campuses.active} active
+                {org.campuses.inactive > 0 && ` · ${org.campuses.inactive} inactive`}
+              </dd>
               <dt className="text-muted-foreground">Users</dt>
               <dd>{org._count.users}</dd>
               <dt className="text-muted-foreground">Created</dt>
@@ -100,6 +104,7 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
                 <Th>Name</Th>
                 <Th>Code</Th>
                 <Th>Campuses</Th>
+                <Th>Status</Th>
                 <Th />
               </tr>
             </TableHead>
@@ -109,23 +114,58 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
                   <Td className="font-medium">{institution.name}</Td>
                   <Td>{institution.code}</Td>
                   <Td>{institution._count.campuses}</Td>
-                  <Td className="text-right">
-                    {institution._count.campuses === 0 && (
-                      <ActionForm
-                        action={deleteInstitution.bind(null, org.id, institution.id)}
-                        submitLabel="Delete"
-                        pendingLabel="Deleting…"
-                        confirmMessage={`Delete ${institution.name}? Only an empty institution can be deleted.`}
-                        submitVariant="ghost"
-                        submitSize="sm"
-                      />
-                    )}
+                  <Td>
+                    <Badge variant={institution.status === 'ACTIVE' ? 'success' : 'outline'}>
+                      {institution.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </Td>
+                  <Td>
+                    <div className="flex justify-end gap-1">
+                      {institution.status === 'ACTIVE' ? (
+                        <ActionForm
+                          action={setInstitutionStatus.bind(
+                            null,
+                            org.id,
+                            institution.id,
+                            'deactivate',
+                          )}
+                          submitLabel="Deactivate"
+                          pendingLabel="…"
+                          confirmMessage={`Deactivate ${institution.name}? Its records are kept and can be read, but nothing new can be added there or at its campuses, and staff roles there stop working.`}
+                          submitVariant="outline"
+                          submitSize="sm"
+                        />
+                      ) : (
+                        <ActionForm
+                          action={setInstitutionStatus.bind(
+                            null,
+                            org.id,
+                            institution.id,
+                            'activate',
+                          )}
+                          submitLabel="Activate"
+                          pendingLabel="…"
+                          submitVariant="outline"
+                          submitSize="sm"
+                        />
+                      )}
+                      {institution._count.campuses === 0 && (
+                        <ActionForm
+                          action={deleteInstitution.bind(null, org.id, institution.id)}
+                          submitLabel="Delete"
+                          pendingLabel="Deleting…"
+                          confirmMessage={`Delete ${institution.name}? Only an empty institution can be deleted.`}
+                          submitVariant="ghost"
+                          submitSize="sm"
+                        />
+                      )}
+                    </div>
                   </Td>
                 </tr>
               ))}
               {org.institutions.length === 0 && (
                 <tr>
-                  <Td colSpan={4} className="py-8 text-center text-muted-foreground">
+                  <Td colSpan={5} className="py-8 text-center text-muted-foreground">
                     No institutions yet.
                   </Td>
                 </tr>

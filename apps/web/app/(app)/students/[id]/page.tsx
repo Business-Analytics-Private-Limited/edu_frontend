@@ -51,6 +51,7 @@ import {
 } from '../actions';
 import { GENDERS, RELATIONS, sectionLabel, STUDENT_STATUSES } from '../labels';
 import { DocumentsCard } from './documents-card';
+import { campusesInUse } from '../../../../lib/places';
 
 const isoDate = (value: string) => value.slice(0, 10);
 
@@ -79,7 +80,7 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
     canMove && can(me, 'platform.institution.view')
       ? (await api<Institution[]>('/institutions'))
           .filter((i) => i.id === student.institutionId)
-          .flatMap((i) => i.campuses)
+          .flatMap(campusesInUse)
           .filter(
             (c) =>
               c.id !== student.campusId &&

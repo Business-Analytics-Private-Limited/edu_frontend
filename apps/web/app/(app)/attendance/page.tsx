@@ -22,6 +22,7 @@ import { api } from '../../../lib/api';
 import { can, canAt, getMe } from '../../../lib/me';
 import type { DailySummary, Institution } from '../../../lib/types';
 import { shiftDay, STATUSES } from './labels';
+import { placeName } from '../../../lib/places';
 
 export default async function AttendanceTodayPage({
   searchParams,
@@ -87,7 +88,7 @@ export default async function AttendanceTodayPage({
             <Select id="campusId" name="campusId" defaultValue={campus.id} className="w-56">
               {campuses.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} ({c.institution.code})
+                  {placeName(c, c.institution)} ({c.institution.code})
                 </option>
               ))}
             </Select>

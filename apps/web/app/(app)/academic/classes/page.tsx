@@ -25,6 +25,7 @@ import { api } from '../../../../lib/api';
 import { can, canAt, getMe } from '../../../../lib/me';
 import type { CampusClasses, ClassItem, Institution, Me } from '../../../../lib/types';
 import { createClass, deleteClass } from '../actions';
+import { placeName } from '../../../../lib/places';
 
 export default async function ClassesPage({
   searchParams,
@@ -86,7 +87,7 @@ export default async function ClassesPage({
               variant={c.id === campus.id ? 'default' : 'outline'}
             >
               <Link href={`/academic/classes?campus=${c.id}`}>
-                {c.name} ({c.institution.code})
+                {placeName(c, c.institution)} ({c.institution.code})
               </Link>
             </Button>
           ))}

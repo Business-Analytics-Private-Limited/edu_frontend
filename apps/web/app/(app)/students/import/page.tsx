@@ -25,6 +25,7 @@ import { api } from '../../../../lib/api';
 import { can, canAt, getMe } from '../../../../lib/me';
 import type { AcademicYear, Institution } from '../../../../lib/types';
 import { importStudents } from '../actions';
+import { campusesInUse } from '../../../../lib/places';
 
 const COLUMNS: [string, string][] = [
   ['admissionNo', 'Leave empty for automatic numbering (if set up)'],
@@ -47,7 +48,7 @@ export default async function ImportStudentsPage() {
     can(me, 'academic.year.view') ? api<AcademicYear[]>('/academic-years') : [],
   ]);
   const campuses = institutions.flatMap((i) =>
-    i.campuses
+    campusesInUse(i)
       .filter((c) => canAt(me, 'students.student.import', { institutionId: i.id, campusId: c.id }))
       .map((c) => ({ ...c, institution: i })),
   );

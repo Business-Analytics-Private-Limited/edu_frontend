@@ -38,7 +38,15 @@ export interface OrganizationDetail extends Organization {
   _count: { users: number; institutions: number; campuses: number; roles: number };
   admins: { id: string; name: string; email: string; status: string; lastLoginAt: string | null }[];
   /** Only the super admin adds and deletes institutions (ADR-0025). */
-  institutions: { id: string; name: string; code: string; _count: { campuses: number } }[];
+  institutions: {
+    id: string;
+    name: string;
+    code: string;
+    /** INACTIVE = closed: records stay, nothing new happens there (ADR-0026). */
+    status: 'ACTIVE' | 'INACTIVE';
+    _count: { campuses: number };
+  }[];
+  campuses: { active: number; inactive: number };
   modules: (Module & { enabled: boolean })[];
 }
 
