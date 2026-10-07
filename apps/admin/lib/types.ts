@@ -8,6 +8,18 @@ export interface Me {
   id: string;
   name: string;
   email: string;
+  /** The password from the server's settings must be changed first (ADR-0028). */
+  mustChangePassword: boolean;
+  /** Two-step login: off, set up but not confirmed yet, or on. */
+  twoFactor: 'off' | 'pending' | 'on' | null;
+}
+
+/** What the authenticator app needs to be set up (two-step login). */
+export interface TwoFactorSetup {
+  secret: string;
+  otpauthUrl: string;
+  /** A QR code picture (data: URL) to scan with the app. */
+  qrCode: string;
 }
 
 export type OrganizationStatus = 'ACTIVE' | 'SUSPENDED';

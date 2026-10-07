@@ -1,7 +1,8 @@
 'use server';
 /**
- * Runs on the server when the login form is sent: asks the API to check the email and
- * password, stores the token in the login cookie, and opens the dashboard.
+ * Runs on the server when the login form is sent: asks the API to check the email, password
+ * and (with two-step login) the 6-digit code, stores the token in the login cookie, and opens
+ * the dashboard.
  */
 import { redirect } from 'next/navigation';
 import { api, ApiError } from '../../lib/api';
@@ -12,7 +13,11 @@ export async function login(_previous: FormState, form: FormData): Promise<FormS
   try {
     const result = await api<{ accessToken: string }>('/auth/super-admin/login', {
       method: 'POST',
-      body: { email: form.get('email'), password: form.get('password') },
+      body: {
+        email: form.get('email'),
+        password: form.get('password'),
+        code: String(form.get('code') ?? '').trim() || undefined,
+      },
       withToken: false,
     });
     await setToken(result.accessToken);

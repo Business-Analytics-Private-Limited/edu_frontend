@@ -53,6 +53,20 @@ export default function LoginPage() {
                 required
               />
             </Field>
+            <Field
+              label="Code from your authenticator app"
+              htmlFor="code"
+              hint="Only if two-step login is on"
+            >
+              <Input
+                id="code"
+                name="code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+              />
+            </Field>
           </ActionForm>
         </CardContent>
       </Card>

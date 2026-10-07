@@ -22,6 +22,8 @@ export interface Me {
   /** Everything the user may do somewhere; `grants` says where. */
   permissions: string[];
   grants: Grant[];
+  /** A temporary password that must be changed first (ADR-0028): see /change-password. */
+  mustChangePassword: boolean;
   /** Has the Organization admin role for the whole organization (may activate campuses). */
   isOrganizationAdmin: boolean;
   enabledModules: string[];

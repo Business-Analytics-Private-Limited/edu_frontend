@@ -11,6 +11,7 @@ import { getMe } from '../../lib/me';
 
 export default async function PortalLayout({ children }: { children: ReactNode }) {
   const me = await getMe();
+  if (me.mustChangePassword) redirect('/change-password'); // ADR-0028
   if (me.kind === 'staff') redirect('/');
   const parent = me.kind === 'parent';
 

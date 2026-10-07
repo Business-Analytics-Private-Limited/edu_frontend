@@ -150,6 +150,8 @@ const ACADEMIC_MENU: (NavItem & { permission: string })[] = [
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const me = await getMe();
+  // A temporary password is changed first (ADR-0028).
+  if (me.mustChangePassword) redirect('/change-password');
   // Parents and students have their own pages (app/portal).
   if (me.kind !== 'staff') redirect('/portal');
   const items = MENU.filter((item) => !item.permission || can(me, item.permission));

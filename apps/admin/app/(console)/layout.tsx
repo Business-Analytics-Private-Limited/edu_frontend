@@ -13,6 +13,7 @@ import {
   ScrollText,
   ShieldCheck,
 } from 'lucide-react';
+import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { api } from '../../lib/api';
 import type { Me } from '../../lib/types';
@@ -29,12 +30,14 @@ const MENU: NavSection[] = [
   },
   {
     title: 'Account',
-    items: [{ href: '/account', label: 'Change password', icon: <KeyRound /> }],
+    items: [{ href: '/account', label: 'Password and two-step login', icon: <KeyRound /> }],
   },
 ];
 
 export default async function ConsoleLayout({ children }: { children: ReactNode }) {
   const me = await api<Me>('/auth/me');
+  // The password from the server's settings is changed first (ADR-0028).
+  if (me.mustChangePassword) redirect('/change-password');
 
   return (
     <AppShell
@@ -52,6 +55,15 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
         </>
       }
     >
+      {me.twoFactor !== 'on' && (
+        <p className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+          Two-step login is off. This account controls every organization: turn it on under{' '}
+          <a href="/account" className="font-medium underline">
+            Account
+          </a>
+          .
+        </p>
+      )}
       {children}
     </AppShell>
   );

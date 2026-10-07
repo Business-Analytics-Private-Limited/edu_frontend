@@ -6,10 +6,12 @@
  *   await api('/institutions', { method: 'POST', body: { name, code, type } });
  *
  * - 401 (not logged in / session ended): goes to /logout, which clears the cookie and shows login.
+ * - 403 "Change your temporary password first": goes to /change-password (ADR-0028).
  * - 403 on a page: shows the "No access" message instead of a crash.
  * - Other errors throw ApiError with the API's message, for forms to show.
  */
 import 'server-only';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getToken } from './session';
 
@@ -40,17 +42,48 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(await visitor()),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: 'no-store', // always fresh data
   });
 
   if (response.status === 401 && withToken) redirect('/logout');
+  const data = await response.json().catch(() => ({}));
+  if (response.status === 403 && data.message === CHANGE_PASSWORD_FIRST) {
+    redirect('/change-password');
+  }
   if (response.status === 403 && method === 'GET') redirect('/no-access');
 
-  const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new ApiError(response.status, messageOf(data));
   return data as T;
+}
+
+/** The API's answer while someone still has a temporary password (ADR-0028). */
+const CHANGE_PASSWORD_FIRST = 'Change your temporary password first';
+
+/**
+ * The visitor's address, passed on to the API (ADR-0028). The API is called from this server,
+ * so without it every visitor would look the same: one rate limit for everybody, and no
+ * address in the audit log. Next.js sets x-forwarded-for; in production the web server in front
+ * (nginx, ...) must set it to the real address.
+ */
+async function visitor(): Promise<Record<string, string>> {
+  try {
+    const address = (await headers()).get('x-forwarded-for')?.split(',')[0]?.trim();
+    return address ? { 'X-Forwarded-For': address } : {};
+  } catch {
+    return {}; // not inside a request (e.g. during a build)
+  }
+}
+
+/** Ends the login session at the API (logout), ignoring errors: the cookie goes anyway. */
+export async function endSession(token: string): Promise<void> {
+  await fetch(`${API_URL}/auth/logout`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, ...(await visitor()) },
+    cache: 'no-store',
+  }).catch(() => undefined);
 }
 
 /** The API's error message. Validation errors come as a list; they are joined into one line. */
@@ -70,7 +103,7 @@ export async function apiUpload<T = unknown>(path: string, form: FormData): Prom
   const token = await getToken();
   const response = await fetch(`${API_URL}${path}`, {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(await visitor()) },
     body: form, // fetch sets the multipart Content-Type with its boundary
     cache: 'no-store',
   });
@@ -88,7 +121,7 @@ export async function apiUpload<T = unknown>(path: string, form: FormData): Prom
 export async function apiDownload(path: string): Promise<Response> {
   const token = await getToken();
   const response = await fetch(`${API_URL}${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(await visitor()) },
     cache: 'no-store',
   });
   if (!response.ok || !response.body) {
