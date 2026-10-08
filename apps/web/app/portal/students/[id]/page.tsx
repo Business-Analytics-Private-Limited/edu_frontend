@@ -29,6 +29,7 @@ export default async function PortalStudentPage({ params }: { params: Promise<{ 
   return (
     <>
       <PageHeader
+        back={{ href: '/portal', label: 'Back' }}
         title={`${student.fullName}${student.surname ? ` ${student.surname}` : ''}`}
         description={`${student.admissionNo} · ${student.institution.name}, ${student.campus.name}`}
         actions={

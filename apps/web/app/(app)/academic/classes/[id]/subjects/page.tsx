@@ -15,7 +15,6 @@ import {
   Checkbox,
   PageHeader,
 } from '@eduplatform/ui';
-import Link from 'next/link';
 import { api } from '../../../../../../lib/api';
 import { can, canAt, getMe } from '../../../../../../lib/me';
 import type { ClassSubjects, Institution } from '../../../../../../lib/types';
@@ -40,16 +39,9 @@ export default async function ClassSubjectsPage({ params }: { params: Promise<{ 
   return (
     <>
       <PageHeader
+        back={{ href: `/academic/classes?campus=${data.class.campusId}`, label: 'Back to classes' }}
         title={`Subjects · ${data.class.name}`}
         description={fullName}
-        actions={
-          <Link
-            href={`/academic/classes?campus=${data.class.campusId}`}
-            className="text-sm text-primary hover:underline"
-          >
-            Back to classes
-          </Link>
-        }
       />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

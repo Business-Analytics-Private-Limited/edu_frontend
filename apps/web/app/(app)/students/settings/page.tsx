@@ -37,7 +37,10 @@ export default async function StudentSettingsPage() {
   if (institutions.length === 0) {
     return (
       <>
-        <PageHeader title="Student settings" />
+        <PageHeader
+          back={{ href: '/students', label: 'Back to students' }}
+          title="Student settings"
+        />
         <EmptyState
           icon={<Settings />}
           title="Nothing to set"
@@ -54,6 +57,7 @@ export default async function StudentSettingsPage() {
   return (
     <>
       <PageHeader
+        back={{ href: '/students', label: 'Back to students' }}
         title="Student settings"
         description="Automatic admission numbers, per institution."
       />

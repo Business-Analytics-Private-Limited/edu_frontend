@@ -23,6 +23,7 @@ export default async function PredefinedRolePage({ params }: { params: Promise<{
     return (
       <>
         <PageHeader
+          back={{ href: '/predefined-roles', label: 'Back to predefined roles' }}
           title={role.name}
           description="Always has every permission, so every organization can manage itself."
         />
@@ -34,6 +35,7 @@ export default async function PredefinedRolePage({ params }: { params: Promise<{
   return (
     <>
       <PageHeader
+        back={{ href: '/predefined-roles', label: 'Back to predefined roles' }}
         title={role.name}
         description={role.description}
         actions={

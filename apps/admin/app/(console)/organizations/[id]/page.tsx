@@ -33,6 +33,7 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
   return (
     <>
       <PageHeader
+        back={{ href: '/organizations', label: 'Back to organizations' }}
         title={org.name}
         description={`Slug: ${org.slug}`}
         actions={

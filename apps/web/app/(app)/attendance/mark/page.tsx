@@ -37,6 +37,10 @@ export default async function MarkAttendancePage({
   return (
     <>
       <PageHeader
+        back={{
+          href: `/attendance?${new URLSearchParams({ campusId: roster.section.campusId, date: roster.date })}`,
+          label: 'Back to attendance',
+        }}
         title={`Attendance · ${roster.section.name}`}
         description={`${roster.date === roster.today ? 'Today' : roster.date}${roster.academicYear ? ` · ${roster.academicYear.name}` : ''}${roster.lastMarkedBy ? ` · last saved by ${roster.lastMarkedBy.name}` : ''}`}
         actions={
@@ -49,12 +53,6 @@ export default async function MarkAttendancePage({
                 Next day →
               </Link>
             )}
-            <Link
-              href={`/attendance?${new URLSearchParams({ campusId: roster.section.campusId, date: roster.date })}`}
-              className="text-primary hover:underline"
-            >
-              All sections
-            </Link>
           </div>
         }
       />

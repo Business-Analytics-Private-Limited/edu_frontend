@@ -56,6 +56,7 @@ export default async function ImportStudentsPage() {
   return (
     <>
       <PageHeader
+        back={{ href: '/students', label: 'Back to students' }}
         title="Import students"
         description="Admit many students from a CSV file. Check first; then import all rows, or none."
         actions={

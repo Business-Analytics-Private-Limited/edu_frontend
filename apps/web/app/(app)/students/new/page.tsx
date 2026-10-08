@@ -38,7 +38,7 @@ export default async function AdmitStudentPage() {
   if (campuses.length === 0) {
     return (
       <>
-        <PageHeader title="Admit student" />
+        <PageHeader back={{ href: '/students', label: 'Back to students' }} title="Admit student" />
         <EmptyState
           icon={<UserPlus />}
           title="No campus to admit to"
@@ -61,7 +61,11 @@ export default async function AdmitStudentPage() {
 
   return (
     <>
-      <PageHeader title="Admit student" description="Fields marked * are required." />
+      <PageHeader
+        back={{ href: '/students', label: 'Back to students' }}
+        title="Admit student"
+        description="Fields marked * are required."
+      />
       <ActionForm
         action={admitStudent}
         submitLabel="Admit student"

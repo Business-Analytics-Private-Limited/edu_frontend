@@ -10,7 +10,8 @@ This is the **frontend** repository of EduPlatform: the web app (`apps/web`, an 
 4. **Show the "No access" page**, never a broken screen, when the API answers 403 (`lib/api.ts` does this for pages).
 5. **API types** live in each app's `lib/types.ts`, written from Swagger (http://localhost:3000/api/docs). Keep them in line with the backend's responses.
 6. **UI text is written so it can be translated later** (English first; Telugu and Hindi later).
-7. Don't reuse the previous single-institute product's name anywhere. "EduPlatform" is a working name.
+7. **Every page opened from another page has a way back:** `<PageHeader back={{ href: '/students', label: 'Back to students' }} />` on details, "new", settings and other sub-pages. Keep the context in `href` where the parent page has one (e.g. the campus or date). Only pages in the menu with no parent page go without.
+8. Don't reuse the previous single-institute product's name anywhere. "EduPlatform" is a working name.
 
 ## Stack
 

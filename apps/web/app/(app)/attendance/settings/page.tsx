@@ -28,7 +28,10 @@ export default async function AttendanceSettingsPage() {
   if (institutions.length === 0) {
     return (
       <>
-        <PageHeader title="Attendance settings" />
+        <PageHeader
+          back={{ href: '/attendance', label: 'Back to attendance' }}
+          title="Attendance settings"
+        />
         <EmptyState
           icon={<Settings />}
           title="Nothing to set"
@@ -39,7 +42,10 @@ export default async function AttendanceSettingsPage() {
   }
   return (
     <>
-      <PageHeader title="Attendance settings" />
+      <PageHeader
+        back={{ href: '/attendance', label: 'Back to attendance' }}
+        title="Attendance settings"
+      />
       <div className="grid gap-6 lg:grid-cols-2">
         {institutions.map((institution) => (
           <Card key={institution.id}>

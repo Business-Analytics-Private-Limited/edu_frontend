@@ -128,6 +128,7 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
   return (
     <>
       <PageHeader
+        back={{ href: '/students', label: 'Back to students' }}
         title={`${student.fullName}${student.surname ? ` ${student.surname}` : ''}`}
         description={`${student.admissionNo} · ${student.campus.name} (${student.institution.name})`}
         actions={

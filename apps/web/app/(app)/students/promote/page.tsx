@@ -66,6 +66,7 @@ export default async function PromotePage({
   return (
     <>
       <PageHeader
+        back={{ href: '/students', label: 'Back to students' }}
         title="Promote students"
         description="Move a campus's students on to the next academic year, section by section."
       />

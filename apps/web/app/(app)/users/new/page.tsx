@@ -20,6 +20,7 @@ export default async function NewUserPage() {
   return (
     <>
       <PageHeader
+        back={{ href: '/users', label: 'Back to users' }}
         title="Add user"
         description="They log in with this email and the temporary password."
       />

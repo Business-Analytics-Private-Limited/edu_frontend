@@ -49,6 +49,7 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
   return (
     <>
       <PageHeader
+        back={{ href: '/users', label: 'Back to users' }}
         title={user.name}
         description={user.email}
         actions={

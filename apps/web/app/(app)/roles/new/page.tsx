@@ -13,7 +13,7 @@ export default async function NewRolePage() {
 
   return (
     <>
-      <PageHeader title="New role" />
+      <PageHeader back={{ href: '/roles', label: 'Back to roles' }} title="New role" />
       <ActionForm
         action={createRole}
         submitLabel="Create role"

@@ -43,7 +43,7 @@ export default async function MoveStudentsPage({
   if (campuses.length === 0) {
     return (
       <>
-        <PageHeader title="Move students" />
+        <PageHeader back={{ href: '/students', label: 'Back to students' }} title="Move students" />
         <EmptyState
           icon={<ArrowLeftRight />}
           title="Nothing to move"
@@ -70,6 +70,7 @@ export default async function MoveStudentsPage({
   return (
     <>
       <PageHeader
+        back={{ href: '/students', label: 'Back to students' }}
         title="Move students"
         description="Move students to another section of the same campus, in the same academic year."
       />

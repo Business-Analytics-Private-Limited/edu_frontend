@@ -18,7 +18,7 @@
 | `src/components/badge.tsx` | `Badge`: small status labels (default, success, warning, destructive, outline) |
 | `src/components/empty-state.tsx` | `EmptyState`: icon + message, for empty lists and "No access" pages |
 | `src/shell/app-shell.tsx` | `AppShell`: sidebar + header page frame, with a mobile menu |
-| `src/shell/page-header.tsx` | `PageHeader`: page title, description and actions |
+| `src/shell/page-header.tsx` | `PageHeader`: page title, description, actions, and `back` ("← Back to …"): give `back` to every page opened from another page (details, "new", settings) |
 | `src/shell/user-badge.tsx` | `UserBadge`: signed-in person's initials and name |
 | `src/lib/cn.ts` | `cn()`: joins class names; the caller's classes win over defaults |
 

@@ -53,7 +53,11 @@ export default async function AttendanceReportPage({
 
   return (
     <>
-      <PageHeader title="Attendance report" description="A section's attendance over a period." />
+      <PageHeader
+        back={{ href: '/attendance', label: 'Back to attendance' }}
+        title="Attendance report"
+        description="A section's attendance over a period."
+      />
       <form className="mb-6 flex flex-wrap items-end gap-3">
         <Field label="Section" htmlFor="classId">
           <Select

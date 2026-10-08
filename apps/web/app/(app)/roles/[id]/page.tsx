@@ -32,6 +32,7 @@ export default async function RolePage({ params }: { params: Promise<{ id: strin
     return (
       <>
         <PageHeader
+          back={{ href: '/roles', label: 'Back to roles' }}
           title={role.name}
           description={readOnlyReason(role, hasMore)}
           actions={canDelete && <DeleteButton role={role} />}
@@ -45,6 +46,7 @@ export default async function RolePage({ params }: { params: Promise<{ id: strin
     return (
       <>
         <PageHeader
+          back={{ href: '/roles', label: 'Back to roles' }}
           title={role.name}
           description={role.description ?? undefined}
           actions={
@@ -88,7 +90,11 @@ export default async function RolePage({ params }: { params: Promise<{ id: strin
 
   return (
     <>
-      <PageHeader title={role.name} actions={canDelete && <DeleteButton role={role} />} />
+      <PageHeader
+        back={{ href: '/roles', label: 'Back to roles' }}
+        title={role.name}
+        actions={canDelete && <DeleteButton role={role} />}
+      />
       <ActionForm action={updateRole.bind(null, role.id)} submitLabel="Save" className="gap-6">
         <RoleFields resources={resources} role={role} myPermissions={me.permissions} />
       </ActionForm>

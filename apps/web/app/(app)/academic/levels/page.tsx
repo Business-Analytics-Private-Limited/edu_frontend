@@ -32,6 +32,12 @@ export default async function LevelsPage({
   return (
     <>
       <PageHeader
+        back={{
+          href: institution.campuses[0]
+            ? `/academic/classes?campus=${institution.campuses[0].id}`
+            : '/academic/classes',
+          label: 'Back to classes',
+        }}
         title={`Class levels · ${institution.name}`}
         description="From the top level down to the level where students are placed (up to 6)."
       />

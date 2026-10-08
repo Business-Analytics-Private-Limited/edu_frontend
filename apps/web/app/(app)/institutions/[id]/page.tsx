@@ -52,6 +52,7 @@ export default async function InstitutionPage({ params }: { params: Promise<{ id
   return (
     <>
       <PageHeader
+        back={{ href: '/institutions', label: 'Back to institutions' }}
         title={institution.name}
         description={`Code: ${institution.code}`}
         actions={closed && <Badge variant="outline">Inactive</Badge>}

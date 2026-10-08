@@ -8,6 +8,7 @@ export default function NewOrganizationPage() {
   return (
     <>
       <PageHeader
+        back={{ href: '/organizations', label: 'Back to organizations' }}
         title="New organization"
         description="The first admin can log in to the web app right away and set up everything else."
       />
