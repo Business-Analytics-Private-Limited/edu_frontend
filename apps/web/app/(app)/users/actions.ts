@@ -6,6 +6,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api, errorMessage } from '../../../lib/api';
+import { flash } from '../../../lib/flash';
 import type { FormState, User } from '../../../lib/types';
 
 /** The "Where" drop-down value -> what the API expects. "" = the whole organization. */
@@ -31,6 +32,7 @@ export async function createUser(_previous: FormState, form: FormData): Promise<
   } catch (error) {
     return { error: errorMessage(error) };
   }
+  await flash('User created');
   redirect(`/users/${user.id}`);
 }
 
@@ -72,7 +74,7 @@ export async function removeRole(id: string, assignmentId: string): Promise<Form
     return { error: errorMessage(error) };
   }
   revalidatePath(`/users/${id}`);
-  return {};
+  return { success: 'Role removed' };
 }
 
 export async function setUserStatus(
@@ -85,5 +87,8 @@ export async function setUserStatus(
     return { error: errorMessage(error) };
   }
   revalidatePath(`/users/${id}`);
-  return {};
+  return {
+    success:
+      action === 'deactivate' ? 'User deactivated. They can no longer log in.' : 'User activated',
+  };
 }

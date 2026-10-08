@@ -5,6 +5,7 @@
  */
 import { redirect } from 'next/navigation';
 import { api, ApiError } from '../../lib/api';
+import { flash } from '../../lib/flash';
 import type { FormState } from '../../lib/types';
 
 export async function changeTemporaryPassword(
@@ -24,5 +25,6 @@ export async function changeTemporaryPassword(
     if (error instanceof ApiError) return { error: error.message };
     return { error: 'The server is not reachable. Is the backend running?' };
   }
+  await flash('Password changed. Welcome!');
   redirect('/');
 }

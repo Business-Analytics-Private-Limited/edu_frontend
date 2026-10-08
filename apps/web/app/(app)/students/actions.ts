@@ -7,6 +7,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api, apiUpload, errorMessage } from '../../../lib/api';
+import { flash } from '../../../lib/flash';
 import { parseCsv } from '../../../lib/csv';
 import type { FormState, StudentProfile } from '../../../lib/types';
 
@@ -16,15 +17,15 @@ function text(form: FormData, name: string): string | undefined {
   return value === '' ? undefined : value;
 }
 
-/** Runs an API call for one student's page and refreshes it. */
-async function forStudent(id: string, call: () => Promise<unknown>, success?: string) {
+/** Runs an API call for one student's page, refreshes it, and says what happened. */
+async function forStudent(id: string, call: () => Promise<unknown>, success: string) {
   try {
     await call();
   } catch (error) {
     return { error: errorMessage(error) } satisfies FormState;
   }
   revalidatePath(`/students/${id}`);
-  return (success ? { success } : {}) satisfies FormState;
+  return { success } satisfies FormState;
 }
 
 export async function admitStudent(_previous: FormState, form: FormData): Promise<FormState> {
@@ -65,6 +66,7 @@ export async function admitStudent(_previous: FormState, form: FormData): Promis
   } catch (error) {
     return { error: errorMessage(error) };
   }
+  await flash('Student admitted');
   redirect(`/students/${student.id}`);
 }
 
@@ -126,13 +128,23 @@ export async function addGuardian(id: string, _previous: FormState, form: FormDa
 }
 
 export async function makePrimaryGuardian(id: string, guardianId: string) {
-  return forStudent(id, () =>
-    api(`/students/${id}/guardians/${guardianId}`, { method: 'PATCH', body: { isPrimary: true } }),
+  return forStudent(
+    id,
+    () =>
+      api(`/students/${id}/guardians/${guardianId}`, {
+        method: 'PATCH',
+        body: { isPrimary: true },
+      }),
+    'Primary guardian changed',
   );
 }
 
 export async function removeGuardian(id: string, guardianId: string) {
-  return forStudent(id, () => api(`/students/${id}/guardians/${guardianId}`, { method: 'DELETE' }));
+  return forStudent(
+    id,
+    () => api(`/students/${id}/guardians/${guardianId}`, { method: 'DELETE' }),
+    'Guardian removed',
+  );
 }
 
 export async function enrol(id: string, _previous: FormState, form: FormData) {
@@ -174,6 +186,7 @@ export async function deleteStudent(id: string): Promise<FormState> {
   } catch (error) {
     return { error: errorMessage(error) };
   }
+  await flash('Student deleted');
   redirect('/students');
 }
 
@@ -371,7 +384,11 @@ export async function grantPortalAccess(id: string, _previous: FormState, form: 
 }
 
 export async function revokePortalAccess(id: string, userId: string) {
-  return forStudent(id, () => api(`/students/${id}/portal-access/${userId}`, { method: 'DELETE' }));
+  return forStudent(
+    id,
+    () => api(`/students/${id}/portal-access/${userId}`, { method: 'DELETE' }),
+    'Portal access removed. That login no longer works.',
+  );
 }
 
 // --- Documents -----------------------------------------------------------------------------------
@@ -395,16 +412,23 @@ export async function reviewDocument(
   _previous: FormState,
   form: FormData,
 ) {
-  return forStudent(id, () =>
-    api(`/students/${id}/documents/${documentId}`, {
-      method: 'PATCH',
-      body: { status, note: text(form, 'note') },
-    }),
+  return forStudent(
+    id,
+    () =>
+      api(`/students/${id}/documents/${documentId}`, {
+        method: 'PATCH',
+        body: { status, note: text(form, 'note') },
+      }),
+    status === 'VERIFIED' ? 'Document verified' : 'Document rejected',
   );
 }
 
 export async function deleteDocument(id: string, documentId: string) {
-  return forStudent(id, () => api(`/students/${id}/documents/${documentId}`, { method: 'DELETE' }));
+  return forStudent(
+    id,
+    () => api(`/students/${id}/documents/${documentId}`, { method: 'DELETE' }),
+    'Document deleted',
+  );
 }
 
 // --- Document types (Student settings) -----------------------------------------------------------
@@ -441,7 +465,7 @@ export async function updateDocumentType(
     return { error: errorMessage(error) };
   }
   revalidatePath('/students/settings');
-  return {};
+  return { success: 'Document type updated' };
 }
 
 export async function deleteDocumentType(typeId: string): Promise<FormState> {
@@ -451,5 +475,5 @@ export async function deleteDocumentType(typeId: string): Promise<FormState> {
     return { error: errorMessage(error) };
   }
   revalidatePath('/students/settings');
-  return {};
+  return { success: 'Document type deleted' };
 }

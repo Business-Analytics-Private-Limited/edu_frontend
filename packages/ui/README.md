@@ -16,6 +16,7 @@
 | `src/components/card.tsx` | `Card` with `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter` |
 | `src/components/form.tsx` | `Label`, `Input` |
 | `src/components/badge.tsx` | `Badge`: small status labels (default, success, warning, destructive, outline) |
+| `src/components/toaster.tsx` | `toast()` and `<Toaster>`: pop-up messages in the corner. `<ActionForm>` shows every success and error this way; a server action that redirects leaves its message with `flash()` (each app's `lib/flash.ts`) |
 | `src/components/empty-state.tsx` | `EmptyState`: icon + message, for empty lists and "No access" pages |
 | `src/shell/app-shell.tsx` | `AppShell`: sidebar + header page frame, with a mobile menu |
 | `src/shell/page-header.tsx` | `PageHeader`: page title, description, actions, and `back` ("← Back to …"): give `back` to every page opened from another page (details, "new", settings) |

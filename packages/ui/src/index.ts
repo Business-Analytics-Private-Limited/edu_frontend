@@ -7,6 +7,7 @@ export { cn } from './lib/cn';
 // Building blocks
 export { ActionForm, type ActionFormProps, type FormState } from './components/action-form';
 export { Alert } from './components/alert';
+export { toast, Toaster, type ToastVariant } from './components/toaster';
 export { Badge, type BadgeProps } from './components/badge';
 export { Button, buttonVariants, type ButtonProps } from './components/button';
 export {

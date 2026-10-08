@@ -7,6 +7,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api, ApiError } from '../../../lib/api';
+import { flash } from '../../../lib/flash';
 import type { FormState, Organization } from '../../../lib/types';
 
 /** Text field of a form, or undefined when left empty (so optional fields are left out). */
@@ -53,6 +54,7 @@ export async function createOrganization(_previous: FormState, form: FormData): 
       error: error instanceof ApiError ? error.message : 'Could not create the organization',
     };
   }
+  await flash('Organization created');
   redirect(`/organizations/${created.id}`);
 }
 
@@ -70,7 +72,7 @@ export async function setModule(
     return { error: error instanceof ApiError ? error.message : 'Could not change the module' };
   }
   revalidatePath(`/organizations/${organizationId}`);
-  return {};
+  return { success: enabled ? 'Module switched on' : 'Module switched off' };
 }
 
 export async function setStatus(
@@ -83,7 +85,12 @@ export async function setStatus(
     return { error: error instanceof ApiError ? error.message : 'Could not change the status' };
   }
   revalidatePath(`/organizations/${organizationId}`);
-  return {};
+  return {
+    success:
+      action === 'suspend'
+        ? 'Organization suspended. Its users can no longer log in.'
+        : 'Organization activated',
+  };
 }
 
 export async function addInstitution(
@@ -117,7 +124,7 @@ export async function deleteInstitution(
     };
   }
   revalidatePath(`/organizations/${organizationId}`);
-  return {};
+  return { success: 'Institution deleted' };
 }
 
 /** Closes or reopens an institution (ADR-0026). */
@@ -137,5 +144,5 @@ export async function setInstitutionStatus(
     return { error: error instanceof ApiError ? error.message : `Could not ${action} it` };
   }
   revalidatePath(`/organizations/${organizationId}`);
-  return {};
+  return { success: action === 'deactivate' ? 'Institution closed' : 'Institution opened again' };
 }

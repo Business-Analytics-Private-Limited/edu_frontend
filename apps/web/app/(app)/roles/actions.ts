@@ -6,6 +6,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api, errorMessage } from '../../../lib/api';
+import { flash } from '../../../lib/flash';
 import type { FormState, Role } from '../../../lib/types';
 
 function roleFromForm(form: FormData) {
@@ -23,6 +24,7 @@ export async function createRole(_previous: FormState, form: FormData): Promise<
   } catch (error) {
     return { error: errorMessage(error) };
   }
+  await flash('Role created');
   redirect(`/roles/${role.id}`);
 }
 
@@ -46,6 +48,7 @@ export async function deleteRole(id: string): Promise<FormState> {
   } catch (error) {
     return { error: errorMessage(error) };
   }
+  await flash('Role deleted');
   redirect('/roles');
 }
 
@@ -75,5 +78,5 @@ export async function resetRole(id: string): Promise<FormState> {
     return { error: errorMessage(error) };
   }
   revalidatePath(`/roles/${id}`);
-  return {};
+  return { success: 'Reset to EduPlatform defaults' };
 }

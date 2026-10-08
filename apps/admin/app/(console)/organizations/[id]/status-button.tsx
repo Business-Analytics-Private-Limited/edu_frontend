@@ -2,7 +2,7 @@
 /**
  * "Suspend" / "Activate" button. A suspended organization's users cannot log in.
  */
-import { Button } from '@eduplatform/ui';
+import { Button, toast } from '@eduplatform/ui';
 import { useState, useTransition } from 'react';
 import { setStatus } from '../actions';
 import type { OrganizationStatus } from '../../../../lib/types';
@@ -24,6 +24,8 @@ export function StatusButton({
     startTransition(async () => {
       const result = await setStatus(organizationId, suspend ? 'suspend' : 'activate');
       setError(result.error);
+      if (result.error) toast(result.error, 'error');
+      else if (result.success) toast(result.success);
     });
   }
 

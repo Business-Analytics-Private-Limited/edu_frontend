@@ -35,7 +35,7 @@ export async function startTwoFactor(): Promise<FormState> {
     return failed(error, 'Could not start the setup');
   }
   revalidatePath('/account');
-  return {};
+  return { success: 'Scan the QR code with your authenticator app' };
 }
 
 export async function enableTwoFactor(_previous: FormState, form: FormData): Promise<FormState> {

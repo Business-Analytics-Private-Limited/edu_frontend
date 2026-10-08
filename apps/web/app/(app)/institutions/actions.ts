@@ -59,7 +59,7 @@ export async function renameCampus(
     return { error: errorMessage(error) };
   }
   revalidatePath(`/institutions/${institutionId}`);
-  return {};
+  return { success: 'Campus renamed' };
 }
 
 /** Closes a campus (ADR-0026): records stay, nothing new happens there. */
@@ -73,7 +73,7 @@ export async function deactivateCampus(
     return { error: errorMessage(error) };
   }
   revalidatePath(`/institutions/${institutionId}`);
-  return {};
+  return { success: 'Campus closed. Its records stay.' };
 }
 
 /** Opens a closed campus again (Organization admin only). */
@@ -84,7 +84,7 @@ export async function activateCampus(institutionId: string, campusId: string): P
     return { error: errorMessage(error) };
   }
   revalidatePath(`/institutions/${institutionId}`);
-  return {};
+  return { success: 'Campus opened again' };
 }
 
 /** Really deletes an EMPTY campus, e.g. added by mistake (Organization admin only). */
@@ -95,5 +95,5 @@ export async function deleteCampus(institutionId: string, campusId: string): Pro
     return { error: errorMessage(error) };
   }
   revalidatePath(`/institutions/${institutionId}`);
-  return {};
+  return { success: 'Campus deleted' };
 }
