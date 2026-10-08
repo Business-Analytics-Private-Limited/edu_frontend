@@ -2,8 +2,9 @@
  * /roles: the organization's roles. A role is a named list of permissions; a user can have
  * several roles.
  *
- * Predefined roles (Director, Principal, ...) are the same in every organization and only
- * EduPlatform can change them. The organization adds its own roles for anything else.
+ * Predefined roles (Director, Principal, ...) come from EduPlatform; the organization may change
+ * their permissions ("customized", ADR-0029). The organization adds its own roles for anything
+ * else.
  */
 import { Badge, Button, PageHeader, Table, TableHead, Td, Th } from '@eduplatform/ui';
 import Link from 'next/link';
@@ -52,6 +53,11 @@ export default async function RolesPage() {
                   </Badge>
                 ) : (
                   <Badge className="ml-2">own</Badge>
+                )}
+                {role.customized && (
+                  <Badge variant="warning" className="ml-1">
+                    customized
+                  </Badge>
                 )}
               </Td>
               <Td className="text-muted-foreground">{role.description ?? '—'}</Td>

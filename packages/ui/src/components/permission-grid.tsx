@@ -66,6 +66,11 @@ export function PermissionGrid({ resources, checked, readOnly, allowed }: Permis
           className="size-4 accent-[var(--primary)]"
           aria-label={`${resource.label}: ${label ?? action}`}
         />
+        {/* A disabled box isn't sent with the form: keep a ticked, locked permission (module
+            off, or one you can't hand out) so saving doesn't silently remove it. */}
+        {locked && !readOnly && checked.includes(key) && (
+          <input type="hidden" name="permissions" value={key} />
+        )}
         {label}
       </label>
     );

@@ -121,10 +121,16 @@ export interface Role {
   name: string;
   description: string | null;
   permissions: string[];
-  /** true = the same in every organization; only EduPlatform can change it. */
+  /** true = every organization has it, kept up to date by EduPlatform unless customized. */
   predefined: boolean;
   /** false = can't be given from the Users page (Parent, Student). */
   assignable: boolean;
+  /** Its permissions can be changed (all but Organization admin, Parent, Student). */
+  editable: boolean;
+  /** A predefined role whose permissions this organization changed (ADR-0029). */
+  customized: boolean;
+  /** EduPlatform's current permissions for a predefined role; null for own roles. */
+  defaultPermissions: string[] | null;
   _count: { users: number };
 }
 

@@ -84,6 +84,8 @@ export interface PredefinedRole {
   permissions: string[];
   /** false = given from a student's record, not the Users page (Parent, Student). */
   assignable: boolean;
+  /** Organizations that changed this role themselves: your changes don't reach them (ADR-0029). */
+  customizedIn: number;
 }
 
 /** What a form's server action returns: a message to show, or nothing. */

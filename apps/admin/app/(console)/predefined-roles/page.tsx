@@ -15,7 +15,7 @@ export default async function PredefinedRolesPage() {
     <>
       <PageHeader
         title="Predefined roles"
-        description="Every organization has these roles. Changes apply to all organizations at once."
+        description="Every organization has these roles. Your changes apply to all organizations at once, except those that changed the role themselves (customized)."
       />
       <Table>
         <TableHead>
@@ -24,6 +24,7 @@ export default async function PredefinedRolesPage() {
             <Th>Description</Th>
             <Th>Permissions</Th>
             <Th>Given</Th>
+            <Th>Customized in</Th>
           </tr>
         </TableHead>
         <tbody>
@@ -46,6 +47,7 @@ export default async function PredefinedRolesPage() {
                   <Badge variant="warning">From student records</Badge>
                 )}
               </Td>
+              <Td>{role.customizedIn > 0 ? `${role.customizedIn} organization(s)` : '—'}</Td>
             </tr>
           ))}
         </tbody>

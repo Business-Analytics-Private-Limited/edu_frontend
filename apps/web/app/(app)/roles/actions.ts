@@ -48,3 +48,32 @@ export async function deleteRole(id: string): Promise<FormState> {
   }
   redirect('/roles');
 }
+
+/** A predefined role: only its permissions change (ADR-0029); it becomes "customized". */
+export async function updatePredefinedRole(
+  id: string,
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  try {
+    await api(`/roles/${id}`, {
+      method: 'PATCH',
+      body: { permissions: form.getAll('permissions') },
+    });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath(`/roles/${id}`);
+  return { success: 'Saved. This role now keeps your permissions when EduPlatform changes it.' };
+}
+
+/** Back to EduPlatform's version of a predefined role. */
+export async function resetRole(id: string): Promise<FormState> {
+  try {
+    await api(`/roles/${id}/reset`, { method: 'POST' });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath(`/roles/${id}`);
+  return {};
+}
