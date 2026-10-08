@@ -1,18 +1,10 @@
 /**
- * /login: the super admin login page.
+ * /login: the super admin login page: email and password, then (only with two-step login on)
+ * the code from the authenticator app; see login-form.tsx.
  */
-import {
-  ActionForm,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Field,
-  Input,
-} from '@eduplatform/ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@eduplatform/ui';
 import { ShieldCheck } from 'lucide-react';
-import { login } from './actions';
+import { LoginForm } from './login-form';
 
 export const metadata = { title: 'Sign in' };
 
@@ -28,46 +20,7 @@ export default function LoginPage() {
           <CardDescription>For EduPlatform staff only.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ActionForm
-            action={login}
-            submitLabel="Sign in"
-            pendingLabel="Signing in…"
-            submitSize="lg"
-          >
-            <Field label="Email" htmlFor="email">
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="username"
-                required
-                autoFocus
-              />
-            </Field>
-            <Field label="Password" htmlFor="password">
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-              />
-            </Field>
-            <Field
-              label="Code from your authenticator app"
-              htmlFor="code"
-              hint="Only if two-step login is on"
-            >
-              <Input
-                id="code"
-                name="code"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9]{6}"
-                maxLength={6}
-              />
-            </Field>
-          </ActionForm>
+          <LoginForm />
         </CardContent>
       </Card>
     </main>

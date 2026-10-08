@@ -21,6 +21,8 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /** The API's whole answer, for extra fields such as `twoFactorRequired`. */
+    readonly details: Record<string, unknown> = {},
   ) {
     super(message);
   }
@@ -55,7 +57,7 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
   }
   if (response.status === 403 && method === 'GET') redirect('/no-access');
 
-  if (!response.ok) throw new ApiError(response.status, messageOf(data));
+  if (!response.ok) throw new ApiError(response.status, messageOf(data), data);
   return data as T;
 }
 
