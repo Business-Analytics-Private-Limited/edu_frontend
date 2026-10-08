@@ -3,7 +3,10 @@
  * A form that sends its fields to a Next.js server action and shows the result.
  * Every form in both apps uses it, so they all behave the same:
  *   - shows the error or success message the action returns, in the form and as a pop-up
- *     in the corner (toast), so it is seen even when the form is off screen
+ *     alert in the middle of the screen (alerts.tsx), so it is seen even when the form is
+ *     off screen
+ *   - `confirmMessage` asks "Are you sure?" in a pop-up first; the confirm button says
+ *     `submitLabel` and is red for destructive buttons
  *   - disables the button while saving
  *   - keeps what the user typed when there is an error
  *   - optionally asks "Are you sure?" first, and optionally empties itself after success
@@ -25,7 +28,7 @@ import {
 } from 'react';
 import { cn } from '../lib/cn';
 import { Alert } from './alert';
-import { toast } from './toaster';
+import { confirmDialog, notify } from './alerts';
 import { Button, type ButtonProps } from './button';
 
 /** What a server action returns to the form: a message to show, or nothing. */
@@ -64,17 +67,24 @@ export function ActionForm({
 
   useEffect(() => {
     // Every result also pops up in the corner, so it is seen even when the form is off screen.
-    if (state.success) toast(state.success, 'success');
-    if (state.error) toast(state.error, 'error');
+    if (state.success) notify(state.success, 'success');
+    if (state.error) notify(state.error, 'error');
     if (state.success && resetOnSuccess) formRef.current?.reset();
   }, [state, resetOnSuccess]);
 
   // We send the form ourselves (instead of <form action>) because React would otherwise
   // empty every field after each send, also when the server said "error".
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (confirmMessage && !window.confirm(confirmMessage)) return;
-    const fields = new FormData(event.currentTarget);
+    const fields = new FormData(event.currentTarget); // read now: the event is gone after await
+    if (confirmMessage) {
+      const confirmed = await confirmDialog({
+        text: confirmMessage,
+        confirmText: submitLabel,
+        danger: submitVariant === 'destructive',
+      });
+      if (!confirmed) return;
+    }
     startTransition(() => formAction(fields));
   }
 

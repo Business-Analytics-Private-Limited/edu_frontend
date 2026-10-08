@@ -4,7 +4,7 @@
  * The API refuses when a needed module is off (for example "attendance" needs "students");
  * that message is shown under the checkbox.
  */
-import { Checkbox, toast } from '@eduplatform/ui';
+import { Checkbox, notify } from '@eduplatform/ui';
 import { useState, useTransition } from 'react';
 import { setModule } from '../actions';
 
@@ -22,8 +22,8 @@ export function ModuleSwitch(props: {
     startTransition(async () => {
       const result = await setModule(props.organizationId, props.moduleKey, enabled);
       setError(result.error);
-      if (result.error) toast(result.error, 'error');
-      else if (result.success) toast(result.success);
+      if (result.error) notify(result.error, 'error');
+      else if (result.success) notify(result.success);
     });
   }
 

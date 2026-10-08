@@ -77,3 +77,107 @@
     @apply bg-background text-foreground antialiased;
   }
 }
+
+/*
+ * Pop-up alerts (components/alerts.tsx), in the style of SweetAlert: the box pops in, the icon's
+ * circle and mark draw themselves, the timer bar runs down. Turned off for people who ask their
+ * system for less motion.
+ */
+@keyframes ep-alert-backdrop {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes ep-alert-pop {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes ep-alert-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes ep-alert-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+@keyframes ep-alert-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+@keyframes ep-alert-timer {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+.ep-alert-backdrop {
+  animation: ep-alert-backdrop 0.2s ease-out;
+}
+.ep-alert-box {
+  animation: ep-alert-pop 0.35s ease-out;
+}
+.ep-alert-draw {
+  stroke-dasharray: 160;
+  stroke-dashoffset: 160;
+  animation: ep-alert-draw 0.5s ease-out forwards;
+}
+.ep-alert-draw-late {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: ep-alert-draw 0.35s 0.4s ease-out forwards;
+}
+.ep-alert-shake {
+  animation: ep-alert-shake 0.45s 0.35s ease-in-out;
+}
+.ep-alert-pulse {
+  animation: ep-alert-pulse 0.8s 0.3s ease-in-out 2;
+}
+.ep-alert-timer {
+  transform-origin: left;
+  animation-name: ep-alert-timer;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ep-alert-backdrop,
+  .ep-alert-box,
+  .ep-alert-shake,
+  .ep-alert-pulse {
+    animation: none;
+  }
+  .ep-alert-draw,
+  .ep-alert-draw-late {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
