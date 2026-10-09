@@ -10,7 +10,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: { default: 'EduPlatform', template: '%s · EduPlatform' },
-  description: 'Institution management',
+  description: 'School and college management',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -1,52 +1,35 @@
 /**
- * PLACES on the user screens: where a role applies (the whole organization, one institution or
- * one campus). Closed campuses and institutions are not offered (ADR-0026).
+ * PLACES on the user screens: where a role applies (ADR-0030): the whole organization or one
+ * branch. Closed branches are not offered (ADR-0026).
  *
- *   <PlaceSelect institutions={institutions} me={me} permission="access.user.create" />
+ *   <PlaceSelect branches={branches} me={me} permission="access.user.create" />
  *     a drop-down with only the places where you may add staff; its value is
- *     ""  (whole organization), "institution:<id>" or "campus:<id>"
- *   placeLabel(assignment)       "Whole organization", "Sri Vidya JC" or "Kukatpally (Sri Vidya JC)"
- *
- * The server actions turn the drop-down value back into { institutionId } / { campusId } with
- * placeFromForm() in actions.ts.
+ *     "" (whole organization) or the branch id (sent as "branchId")
+ *   placeLabel(assignment)       "Whole organization" or "KPHB"
  */
 import { Field, Select } from '@eduplatform/ui';
 import { canAt } from '../../../lib/me';
-import type { Institution, Me, Role, RoleAssignment } from '../../../lib/types';
-import { campusesInUse } from '../../../lib/places';
+import type { Branch, Me, Role, RoleAssignment } from '../../../lib/types';
 
 export function PlaceSelect({
-  institutions,
+  branches,
   me,
   permission,
 }: {
-  institutions: Institution[];
+  branches: Branch[];
   me: Me;
   permission: string;
 }) {
   return (
-    <Field label="Where" htmlFor="place" hint="The role applies only here">
-      <Select id="place" name="place" required>
+    <Field label="Where" htmlFor="branchId" hint="The role applies only here">
+      <Select id="branchId" name="branchId" required>
         {canAt(me, permission, {}) && <option value="">Whole organization</option>}
-        {institutions
-          .filter((institution) => institution.status === 'ACTIVE')
-          .map((institution) => (
-            <optgroup key={institution.id} label={institution.name}>
-              {canAt(me, permission, { institutionId: institution.id }) && (
-                <option value={`institution:${institution.id}`}>
-                  {institution.name} (all campuses)
-                </option>
-              )}
-              {campusesInUse(institution)
-                .filter((campus) =>
-                  canAt(me, permission, { institutionId: institution.id, campusId: campus.id }),
-                )
-                .map((campus) => (
-                  <option key={campus.id} value={`campus:${campus.id}`}>
-                    {campus.name}
-                  </option>
-                ))}
-            </optgroup>
+        {branches
+          .filter((b) => b.status === 'ACTIVE' && canAt(me, permission, { branchId: b.id }))
+          .map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
           ))}
       </Select>
     </Field>
@@ -71,11 +54,5 @@ export function RoleSelect({ roles }: { roles: Role[] }) {
 }
 
 export function placeLabel(assignment: RoleAssignment): string {
-  if (assignment.campus) {
-    return assignment.institution
-      ? `${assignment.campus.name} (${assignment.institution.name})`
-      : assignment.campus.name;
-  }
-  if (assignment.institution) return assignment.institution.name;
-  return 'Whole organization';
+  return assignment.branch ? assignment.branch.name : 'Whole organization';
 }

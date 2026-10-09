@@ -43,12 +43,11 @@ export async function saveRegister(
 }
 
 export async function saveAttendanceSettings(
-  institutionId: string,
   _previous: FormState,
   form: FormData,
 ): Promise<FormState> {
   try {
-    await api(`/institutions/${institutionId}/attendance-settings`, {
+    await api('/organization/attendance-settings', {
       method: 'PUT',
       body: {
         timeZone: String(form.get('timeZone') ?? '').trim() || undefined,

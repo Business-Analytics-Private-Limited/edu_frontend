@@ -1,8 +1,8 @@
 /**
  * /organizations/:id: one organization. Shows its details and admins, lets the super admin
- * switch modules on/off, suspend / activate it, and add, deactivate / activate or delete its
- * institutions (only the super admin does that, ADR-0025 and ADR-0026). Delete is only offered
- * for an institution without campuses; anything else is deactivated.
+ * change its name, code and type (the type only while it has no academic structure), switch
+ * modules on/off, suspend / activate it, and add, close / reopen or delete its BRANCHES (only the
+ * super admin does that, ADR-0030; ADR-0026 for closing). Delete is only for an empty branch.
  */
 import {
   ActionForm,
@@ -15,14 +15,15 @@ import {
   Field,
   Input,
   PageHeader,
+  Select,
   Table,
   TableHead,
   Td,
   Th,
 } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
-import type { OrganizationDetail } from '../../../../lib/types';
-import { addInstitution, deleteInstitution, setInstitutionStatus } from '../actions';
+import { ORGANIZATION_TYPES, type OrganizationDetail } from '../../../../lib/types';
+import { addBranch, deleteBranch, setBranchStatus, updateOrganization } from '../actions';
 import { ModuleSwitch } from './module-switch';
 import { StatusButton } from './status-button';
 
@@ -35,7 +36,7 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
       <PageHeader
         back={{ href: '/organizations', label: 'Back to organizations' }}
         title={org.name}
-        description={`Slug: ${org.slug}`}
+        description={`${ORGANIZATION_TYPES[org.type]} · code ${org.code} · slug ${org.slug}`}
         actions={
           <>
             <Badge variant={org.status === 'ACTIVE' ? 'success' : 'destructive'}>
@@ -53,19 +54,16 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-2 gap-y-2 text-sm">
+              <dt className="text-muted-foreground">Structure</dt>
+              <dd>{org.levelNames.join(' › ')}</dd>
               <dt className="text-muted-foreground">Contact</dt>
               <dd>{org.contactName ?? '—'}</dd>
               <dt className="text-muted-foreground">Email</dt>
               <dd>{org.contactEmail ?? '—'}</dd>
               <dt className="text-muted-foreground">Phone</dt>
               <dd>{org.contactPhone ?? '—'}</dd>
-              <dt className="text-muted-foreground">Institutions</dt>
-              <dd>{org._count.institutions}</dd>
-              <dt className="text-muted-foreground">Campuses</dt>
-              <dd>
-                {org.campuses.active} active
-                {org.campuses.inactive > 0 && ` · ${org.campuses.inactive} inactive`}
-              </dd>
+              <dt className="text-muted-foreground">Branches</dt>
+              <dd>{org._count.branches}</dd>
               <dt className="text-muted-foreground">Users</dt>
               <dd>{org._count.users}</dd>
               <dt className="text-muted-foreground">Created</dt>
@@ -94,9 +92,44 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
             ))}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Name, code and type</CardTitle>
+            <CardDescription>
+              The type decides the academic structure; it can only change while the organization has
+              set up no structure and admitted no students.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ActionForm action={updateOrganization.bind(null, org.id)} submitLabel="Save">
+              <Field label="Name" htmlFor="orgName">
+                <Input id="orgName" name="name" defaultValue={org.name} required />
+              </Field>
+              <Field label="Code" htmlFor="orgCode" hint="Used in admission numbers ({CODE})">
+                <Input
+                  id="orgCode"
+                  name="code"
+                  defaultValue={org.code}
+                  required
+                  pattern="[A-Za-z0-9]{2,10}"
+                />
+              </Field>
+              <Field label="Type" htmlFor="orgType">
+                <Select id="orgType" name="type" defaultValue={org.type}>
+                  {Object.entries(ORGANIZATION_TYPES).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </ActionForm>
+          </CardContent>
+        </Card>
       </div>
 
-      <h2 className="mb-3 mt-8 text-lg font-semibold">Institutions</h2>
+      <h2 className="mb-3 mt-8 text-lg font-semibold">Branches</h2>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Table>
@@ -104,70 +137,56 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
               <tr>
                 <Th>Name</Th>
                 <Th>Code</Th>
-                <Th>Campuses</Th>
                 <Th>Status</Th>
                 <Th />
               </tr>
             </TableHead>
             <tbody>
-              {org.institutions.map((institution) => (
-                <tr key={institution.id}>
-                  <Td className="font-medium">{institution.name}</Td>
-                  <Td>{institution.code}</Td>
-                  <Td>{institution._count.campuses}</Td>
+              {org.branches.map((branch) => (
+                <tr key={branch.id}>
+                  <Td className="font-medium">{branch.name}</Td>
+                  <Td>{branch.code}</Td>
                   <Td>
-                    <Badge variant={institution.status === 'ACTIVE' ? 'success' : 'outline'}>
-                      {institution.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                    <Badge variant={branch.status === 'ACTIVE' ? 'success' : 'outline'}>
+                      {branch.status === 'ACTIVE' ? 'Active' : 'Closed'}
                     </Badge>
                   </Td>
                   <Td>
                     <div className="flex justify-end gap-1">
-                      {institution.status === 'ACTIVE' ? (
+                      {branch.status === 'ACTIVE' ? (
                         <ActionForm
-                          action={setInstitutionStatus.bind(
-                            null,
-                            org.id,
-                            institution.id,
-                            'deactivate',
-                          )}
-                          submitLabel="Deactivate"
+                          action={setBranchStatus.bind(null, org.id, branch.id, 'deactivate')}
+                          submitLabel="Close"
                           pendingLabel="…"
-                          confirmMessage={`Deactivate ${institution.name}? Its records are kept and can be read, but nothing new can be added there or at its campuses, and staff roles there stop working.`}
+                          confirmMessage={`Close ${branch.name}? Its records are kept and can be read, but nothing new can happen there, and staff roles there stop working.`}
                           submitVariant="outline"
                           submitSize="sm"
                         />
                       ) : (
                         <ActionForm
-                          action={setInstitutionStatus.bind(
-                            null,
-                            org.id,
-                            institution.id,
-                            'activate',
-                          )}
-                          submitLabel="Activate"
+                          action={setBranchStatus.bind(null, org.id, branch.id, 'activate')}
+                          submitLabel="Open again"
                           pendingLabel="…"
                           submitVariant="outline"
                           submitSize="sm"
                         />
                       )}
-                      {institution._count.campuses === 0 && (
-                        <ActionForm
-                          action={deleteInstitution.bind(null, org.id, institution.id)}
-                          submitLabel="Delete"
-                          pendingLabel="Deleting…"
-                          confirmMessage={`Delete ${institution.name}? Only an empty institution can be deleted.`}
-                          submitVariant="ghost"
-                          submitSize="sm"
-                        />
-                      )}
+                      <ActionForm
+                        action={deleteBranch.bind(null, org.id, branch.id)}
+                        submitLabel="Delete"
+                        pendingLabel="Deleting…"
+                        confirmMessage={`Delete ${branch.name}? Only an empty branch (added by mistake) can be deleted.`}
+                        submitVariant="destructive"
+                        submitSize="sm"
+                      />
                     </div>
                   </Td>
                 </tr>
               ))}
-              {org.institutions.length === 0 && (
+              {org.branches.length === 0 && (
                 <tr>
-                  <Td colSpan={5} className="py-8 text-center text-muted-foreground">
-                    No institutions yet.
+                  <Td colSpan={4} className="py-8 text-center text-muted-foreground">
+                    No branches yet.
                   </Td>
                 </tr>
               )}
@@ -177,25 +196,17 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
 
         <Card>
           <CardHeader>
-            <CardTitle>Add institution</CardTitle>
-            <CardDescription>
-              The organization&apos;s admin then adds its campuses and sets up its class levels.
-            </CardDescription>
+            <CardTitle>Add branch</CardTitle>
+            <CardDescription>A location of the organization, e.g. KPHB.</CardDescription>
           </CardHeader>
           <CardContent>
             <ActionForm
-              action={addInstitution.bind(null, org.id)}
-              submitLabel="Add institution"
+              action={addBranch.bind(null, org.id)}
+              submitLabel="Add branch"
               resetOnSuccess
             >
               <Field label="Name" htmlFor="name">
-                <Input
-                  id="name"
-                  name="name"
-                  required
-                  minLength={2}
-                  placeholder="Sri Vidya Degree College"
-                />
+                <Input id="name" name="name" required minLength={2} placeholder="KPHB" />
               </Field>
               <Field label="Code" htmlFor="code" hint="Capital letters, digits, _ and -">
                 <Input
@@ -203,7 +214,7 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
                   name="code"
                   required
                   pattern="[A-Za-z0-9_\-]{2,20}"
-                  placeholder="SVDC"
+                  placeholder="KPHB"
                 />
               </Field>
             </ActionForm>

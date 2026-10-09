@@ -15,7 +15,7 @@ import {
 } from '@eduplatform/ui';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
-import type { OrganizationListItem, Page } from '../../../lib/types';
+import { ORGANIZATION_TYPES, type OrganizationListItem, type Page } from '../../../lib/types';
 
 export default async function OrganizationsPage({
   searchParams,
@@ -63,7 +63,8 @@ export default async function OrganizationsPage({
           <tr>
             <Th>Name</Th>
             <Th>Slug</Th>
-            <Th>Institutions</Th>
+            <Th>Type</Th>
+            <Th>Branches</Th>
             <Th>Users</Th>
             <Th>Status</Th>
           </tr>
@@ -80,7 +81,8 @@ export default async function OrganizationsPage({
                 </Link>
               </Td>
               <Td className="text-muted-foreground">{org.slug}</Td>
-              <Td>{org._count.institutions}</Td>
+              <Td>{ORGANIZATION_TYPES[org.type].split(' (')[0]}</Td>
+              <Td>{org._count.branches}</Td>
               <Td>{org._count.users}</Td>
               <Td>
                 <Badge variant={org.status === 'ACTIVE' ? 'success' : 'destructive'}>
@@ -91,7 +93,7 @@ export default async function OrganizationsPage({
           ))}
           {result.items.length === 0 && (
             <tr>
-              <Td colSpan={5} className="py-8 text-center text-muted-foreground">
+              <Td colSpan={6} className="py-8 text-center text-muted-foreground">
                 No organizations found.
               </Td>
             </tr>

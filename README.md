@@ -4,12 +4,12 @@ The two websites of EduPlatform, a platform for schools and colleges. The backen
 
 | App | URL | Who logs in | What they do |
 |---|---|---|---|
-| **Super admin console** (`apps/admin`) | http://localhost:3003 | EduPlatform staff | Dashboard; create organizations with their first admin; switch modules on/off; suspend / activate; **predefined roles** (what Director, Principal, Campus admin… may do, for every organization; reset to EduPlatform defaults); change password |
-| **Web app** (`apps/web`) | http://localhost:3001 | An organization's staff | Dashboard (your roles and places, numbers for your part, quick actions); organization; institutions and campuses; users with **roles at places**; own roles (View / Create / Edit / Delete grid); audit log (who, where, what); change password. **Students** (when the module is on): list and search, admission (with batch, section and parent), the student's page with guardians, sections per year and status history; promote to the next year; move students between sections; move a student to another campus; import students from CSV (template, check, import); automatic admission numbers and document types (Student settings); documents on a student's page (upload, verify / reject, download). **Attendance** (when the module is on): a campus's day at a glance, a section's register (mark, change, correct with a reason), reports with percentages, settings (time zone, correction window). **Academic** (when the module is on): academic years, classes per campus following the institution's own levels, batches, subjects (per class, inherited below), calendar (weekly off days, holidays) |
+| **Super admin console** (`apps/admin`) | http://localhost:3003 | EduPlatform staff | Dashboard; create organizations with their **type** (School, Intermediate, Degree, Engineering), code, **branches** and first admin; add / close / reopen / delete branches; switch modules on/off; suspend / activate; **predefined roles** (what Director, Principal, Branch admin… may do, for every organization; create new ones; reset to EduPlatform defaults); change password |
+| **Web app** (`apps/web`) | http://localhost:3001 | An organization's staff | Dashboard (your roles and places, numbers for your part, quick actions); organization; branches; users with **roles at the organization or a branch**; own roles (View / Create / Edit / Delete grid); audit log (who, where, what); change password. **Academic** (when the module is on): academic years; the **structure** for the organization's type (school classes / groups and streams / courses and specializations, progression, level names); **sections** per branch; subjects (per class, inherited below); calendar (weekly off days, holidays). **Students** (when the module is on): Current / Outgoing tabs with filters by branch, year and structure; admission (branch and section chosen step by step, optional parent); the student's page with a placement timeline, change section, change branch, mark as left / re-admit, guardians, documents; promote a branch to the next year (and undo); import from CSV into one chosen section; admission numbers (automatic pattern or typed) and document types (Student settings). **Attendance** (when the module is on): a branch's day at a glance, a section's register (mark, change, correct with a reason), reports with percentages, settings (time zone, correction window) |
 
 **Parents and students** log in on the same page and land in the **portal** (`app/portal`): their children's (or their own) details and attendance, nothing of the staff side. Staff give them logins on a student's page.
 
-Everyone in an organization uses the same web app, but sees only what their roles allow, **where** they apply: a Campus admin sees and manages only their campus, a Principal their institution, an Organization admin everything.
+Everyone in an organization uses the same web app, but sees only what their roles allow, **where** they apply: a Branch admin or Principal sees and manages only their branch; a Director sees every branch, with filters; an Organization admin can do everything.
 
 ## Getting started (Windows)
 
@@ -25,7 +25,7 @@ npm run dev  # starts both apps
 Try it:
 
 1. Open http://localhost:3003 and log in as the super admin (the `SEED_SUPER_ADMIN_...` values in the backend's `.env`).
-2. **Organizations → New organization**: fill in the organization and its first admin.
+2. **Organizations → New organization**: fill in the organization, its type and code, its branches and its first admin.
 3. Open http://localhost:3001 and log in with that admin's email and password.
 
 ## Commands
@@ -43,21 +43,21 @@ Before you push: `npm run lint && npm run typecheck && npm run build`. CI runs t
 
 ## How a page works (read this first)
 
-Every page follows the same pattern. Take **Institutions** (`apps/web/app/(app)/institutions/`):
+Every page follows the same pattern. Take **Branches** (`apps/web/app/(app)/branches/`):
 
 | File | Runs on | What it does |
 |---|---|---|
-| `page.tsx` | server | Loads data with `api('/institutions')` and renders the table and the "Add institution" form |
-| `actions.ts` | server | `createInstitution(...)`: what happens when the form is sent. Calls the API, returns `{ error }` or `{ success }` |
-| `[id]/page.tsx` | server | One institution: `/institutions/<id>` |
+| `page.tsx` | server | Loads data with `api('/branches')` and renders the table |
+| `actions.ts` | server | `renameBranch(...)`: what happens when the form is sent. Calls the API, returns `{ error }` or `{ success }` |
+| `[id]/page.tsx` | server | One branch, with the rename form: `/branches/<id>` |
 
-The flow when a user adds an institution:
+The flow when a user renames a branch:
 
 ```
-browser form ──> actions.ts createInstitution() ──> POST /api/v1/institutions (with the user's token)
+browser form ──> actions.ts renameBranch() ──> PATCH /api/v1/branches/<id> (with the user's token)
                         │                                     │
-                        │ <── { error: "code already used" } ─┘ (shown above the form)
-                        └── revalidatePath('/institutions') ──> page.tsx loads the list again
+                        │ <── { error: "name is required" } ─┘ (shown above the form)
+                        └── revalidatePath('/branches') ──> page.tsx loads the list again
 ```
 
 The shared pieces:
@@ -70,7 +70,7 @@ The shared pieces:
 | `app/login/` | Login page + `actions.ts` that calls `/auth/login` and stores the token |
 | `app/logout/route.ts` | Clears the cookie, goes to `/login` |
 | `app/(app)/layout.tsx` (web) / `app/(console)/layout.tsx` (admin) | The sidebar menu and header around every page after login |
-| `lib/me.ts` (web) | `getMe()` = who is logged in; `can(me, 'access.user.view')` = may they do this somewhere? (menus); `canAt(me, 'platform.campus.update', { institutionId, campusId })` = may they do it **here**? (buttons) |
+| `lib/me.ts` (web) | `getMe()` = who is logged in; `can(me, 'access.user.view')` = may they do this somewhere? (menus); `canAt(me, 'platform.branch.update', { branchId })` = may they do it **here**? (buttons) |
 | `packages/ui` | Buttons, cards, tables, form fields, `ActionForm` (every form) and the page frame |
 
 **Hiding a button is not security.** The backend checks every permission again; the frontend only hides what the user can't use.

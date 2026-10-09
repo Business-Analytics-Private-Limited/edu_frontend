@@ -9,7 +9,7 @@ import { api } from '../../../../lib/api';
 import { getMe } from '../../../../lib/me';
 import type { PortalAttendance, PortalStudent, StudentDocument } from '../../../../lib/types';
 import { STATUS_LABEL } from '../../../(app)/attendance/labels';
-import { RELATIONS, sectionLabel } from '../../../(app)/students/labels';
+import { RELATIONS } from '../../../(app)/students/labels';
 
 export default async function PortalStudentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -24,14 +24,14 @@ export default async function PortalStudentPage({ params }: { params: Promise<{ 
       )
     : null;
   const documents = await api<StudentDocument[]>(`/portal/students/${id}/documents`);
-  const current = student.enrolments[0];
+  const current = student.placement;
 
   return (
     <>
       <PageHeader
         back={{ href: '/portal', label: 'Back' }}
         title={`${student.fullName}${student.surname ? ` ${student.surname}` : ''}`}
-        description={`${student.admissionNo} · ${student.institution.name}, ${student.campus.name}`}
+        description={`${student.admissionNo} · ${student.organization.name}, ${student.branch.name}`}
         actions={
           <Link href="/portal" className="text-sm text-primary hover:underline">
             Back
@@ -46,13 +46,11 @@ export default async function PortalStudentPage({ params }: { params: Promise<{ 
           <CardContent>
             <dl className="grid grid-cols-2 gap-y-2 text-sm">
               <dt className="text-muted-foreground">Section</dt>
-              <dd>{current ? sectionLabel(current.class) : '—'}</dd>
+              <dd>{current?.section ?? '—'}</dd>
               <dt className="text-muted-foreground">Academic year</dt>
-              <dd>{current?.academicYear.name ?? '—'}</dd>
+              <dd>{current?.academicYear ?? '—'}</dd>
               <dt className="text-muted-foreground">Roll no</dt>
               <dd>{current?.rollNo ?? '—'}</dd>
-              <dt className="text-muted-foreground">Batch</dt>
-              <dd>{student.batch ? `${student.batch.name} (${student.batch.stage})` : '—'}</dd>
               <dt className="text-muted-foreground">Date of birth</dt>
               <dd>{new Date(student.dateOfBirth).toLocaleDateString()}</dd>
               {student.guardians?.map((g) => (

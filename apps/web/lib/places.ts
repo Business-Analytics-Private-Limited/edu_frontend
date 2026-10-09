@@ -1,29 +1,21 @@
 /**
- * Closed (inactive) campuses and institutions (ADR-0026). Their records can still be read, but
- * nothing new happens there, so screens that START new work (admit, import, move, promote, give
- * a role, add a holiday) only offer places in use:
- *
- *   institutions.flatMap((i) => campusesInUse(i).filter(...))
- *
- * Screens that only SHOW data (classes, attendance, reports) still list closed campuses, marked
- * with placeName(): "Kukatpally · inactive".
+ * Closed (inactive) branches (ADR-0026). Their records can still be read, but nothing new
+ * happens there, so screens that START new work (admit, import, promote, give a role, add a
+ * holiday or a section) only offer branches in use; screens that only SHOW data still list
+ * closed branches, marked with branchName(): "KPHB · inactive".
  */
-import type { Institution, PlaceStatus } from './types';
+import type { Branch, Me } from './types';
+import { branchesWith } from './me';
 
-/** The institution's campuses that are open, or none when the institution itself is closed. */
-export function campusesInUse<C extends { status: PlaceStatus }>(institution: {
-  status: PlaceStatus;
-  campuses: C[];
-}): C[] {
-  if (institution.status !== 'ACTIVE') return [];
-  return institution.campuses.filter((campus) => campus.status === 'ACTIVE');
+/** A branch's name, with "· inactive" when it is closed. */
+export function branchName(branch: Pick<Branch, 'name' | 'status'>): string {
+  return branch.status === 'ACTIVE' ? branch.name : `${branch.name} · inactive`;
 }
 
-/** A campus's name, with "· inactive" when it or its institution is closed. */
-export function placeName(
-  campus: { name: string; status: PlaceStatus },
-  institution?: Pick<Institution, 'status'>,
-): string {
-  const closed = campus.status !== 'ACTIVE' || (institution && institution.status !== 'ACTIVE');
-  return closed ? `${campus.name} · inactive` : campus.name;
+/** The open branches where the user has `permission` (e.g. where they may admit students). */
+export function branchesForWork(me: Me, branches: Branch[], permission: string): Branch[] {
+  const allowed = branchesWith(me, permission);
+  return branches.filter(
+    (b) => b.status === 'ACTIVE' && (allowed === 'all' || allowed.includes(b.id)),
+  );
 }

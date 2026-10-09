@@ -1,20 +1,20 @@
 /**
  * /users/new: add a user with their first role and where it applies. More roles (e.g. faculty
- * at a second campus) are added on the user's page afterwards.
+ * at a second branch) are added on the user's page afterwards.
  */
 import { ActionForm, Card, CardContent, Field, Input, PageHeader } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
 import { can, getMe } from '../../../../lib/me';
-import type { Institution, Role } from '../../../../lib/types';
+import type { Branch, Role } from '../../../../lib/types';
 import { createUser } from '../actions';
 import { PlaceSelect, RoleSelect } from '../place';
 
 export default async function NewUserPage() {
   const me = await getMe();
-  const [roles, institutions] = await Promise.all([
+  const [roles, branches] = await Promise.all([
     api<Role[]>('/roles'),
-    // The "Where" list; without seeing institutions only "Whole organization" can be offered.
-    can(me, 'platform.institution.view') ? api<Institution[]>('/institutions') : [],
+    // The "Where" list; without seeing branches only "Whole organization" can be offered.
+    can(me, 'platform.branch.view') ? api<Branch[]>('/branches') : [],
   ]);
 
   return (
@@ -37,7 +37,7 @@ export default async function NewUserPage() {
               <Input id="password" name="password" type="text" required minLength={10} />
             </Field>
             <RoleSelect roles={roles} />
-            <PlaceSelect institutions={institutions} me={me} permission="access.user.create" />
+            <PlaceSelect branches={branches} me={me} permission="access.user.create" />
           </ActionForm>
         </CardContent>
       </Card>

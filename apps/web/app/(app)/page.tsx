@@ -1,9 +1,9 @@
 /**
  * / : the home page after login. Every logged-in user can open it, and each person sees their
  * own version:
- *   - their roles and where each applies ("Campus admin · Kukatpally");
- *   - numbers for the part they look after: the whole organization, or their institutions /
- *     campuses (the API counts only those);
+ *   - their roles and where each applies ("Branch admin · KPHB");
+ *   - numbers for the part they look after: the whole organization, or their branches (the API
+ *     counts only those);
  *   - quick actions they are allowed to use;
  *   - the modules their organization has, and which are live.
  */
@@ -20,55 +20,44 @@ import {
 import Link from 'next/link';
 import { api } from '../../lib/api';
 import { can, canAt, getMe } from '../../lib/me';
-import type { Dashboard, Grant, Institution } from '../../lib/types';
+import type { Branch, Dashboard, Grant } from '../../lib/types';
 
 /** Module names, and whether their screens exist yet. */
 const MODULES: Record<string, { name: string; live: boolean }> = {
   academic: { name: 'Academic', live: true },
   students: { name: 'Students', live: true },
   attendance: { name: 'Attendance', live: true },
-  portal: { name: 'Parent and student portal', live: false },
+  portal: { name: 'Parent and student portal', live: true },
   imports: { name: 'Data import', live: false },
 };
 
 export default async function DashboardPage() {
   const me = await getMe();
-  const [data, institutions] = await Promise.all([
+  const [data, branches] = await Promise.all([
     api<Dashboard>('/dashboard'),
-    can(me, 'platform.institution.view') ? api<Institution[]>('/institutions') : [],
+    can(me, 'platform.branch.view') ? api<Branch[]>('/branches') : [],
   ]);
 
-  // Names of places, for "Campus admin · Kukatpally (Sri Vidya JC)".
-  const names = new Map<string, string>();
-  for (const institution of institutions) {
-    names.set(institution.id, institution.name);
-    for (const campus of institution.campuses) names.set(campus.id, campus.name);
-  }
-  const placeOf = (g: Grant) => {
-    if (g.campusId) {
-      const campus = names.get(g.campusId) ?? 'a campus';
-      const institution = g.institutionId ? names.get(g.institutionId) : undefined;
-      return institution ? `${campus} (${institution})` : campus;
-    }
-    if (g.institutionId) return names.get(g.institutionId) ?? 'an institution';
-    return 'Whole organization';
-  };
+  // Branch names, for "Branch admin · KPHB".
+  const names = new Map(branches.map((b) => [b.id, b.name]));
+  const placeOf = (g: Grant) =>
+    g.branchId ? (names.get(g.branchId) ?? 'a branch') : 'Whole organization';
 
-  const wholeOrganization = me.grants.some((g) => !g.institutionId && !g.campusId);
-  const scope = wholeOrganization ? 'in your organization' : 'in your institutions / campuses';
+  const wholeOrganization = me.grants.some((g) => !g.branchId);
+  const scope = wholeOrganization ? 'in your organization' : 'in your branches';
 
   const numbers = [
     {
-      label: 'Institutions',
-      value: data.institutions,
-      note: data.inactiveInstitutions ? `${data.inactiveInstitutions} inactive` : undefined,
+      label: 'Branches',
+      value: data.branches,
+      note: data.inactiveBranches ? `${data.inactiveBranches} inactive` : undefined,
       show: true,
     },
     {
-      label: 'Campuses',
-      value: data.campuses,
-      note: data.inactiveCampuses ? `${data.inactiveCampuses} inactive` : undefined,
-      show: true,
+      label: 'Current students',
+      value: data.students?.current ?? 0,
+      note: data.students?.outgoing ? `${data.students.outgoing} outgoing` : undefined,
+      show: data.students !== null && can(me, 'students.student.view'),
     },
     { label: 'Users', value: data.users, show: can(me, 'access.user.view') },
     { label: 'Active users', value: data.activeUsers, show: can(me, 'access.user.view') },
@@ -76,6 +65,11 @@ export default async function DashboardPage() {
   ].filter((n) => n.show);
 
   const actions = [
+    {
+      href: '/students/new',
+      label: 'Admit a student',
+      show: me.enabledModules.includes('students') && can(me, 'students.student.create'),
+    },
     { href: '/users/new', label: 'Add a user', show: can(me, 'access.user.create') },
     { href: '/roles/new', label: 'Create a role', show: canAt(me, 'access.role.create', {}) },
     { href: '/audit', label: 'See recent changes', show: can(me, 'audit.log.view') },

@@ -9,8 +9,8 @@
 import { ActionForm, Badge, Field, Input, PageHeader } from '@eduplatform/ui';
 import Link from 'next/link';
 import { api } from '../../../../lib/api';
-import { can, canAt, getMe } from '../../../../lib/me';
-import type { Institution, Roster } from '../../../../lib/types';
+import { canAt, getMe } from '../../../../lib/me';
+import type { Roster } from '../../../../lib/types';
 import { saveRegister } from '../actions';
 import { shiftDay, STATUS_LABEL, STATUSES } from '../labels';
 
@@ -22,13 +22,7 @@ export default async function MarkAttendancePage({
   const { classId = '', date = '' } = await searchParams;
   const me = await getMe();
   const roster = await api<Roster>(`/attendance/roster?${new URLSearchParams({ classId, date })}`);
-  const institutions = can(me, 'platform.institution.view')
-    ? await api<Institution[]>('/institutions')
-    : [];
-  const institution = institutions.find((i) =>
-    i.campuses.some((c) => c.id === roster.section.campusId),
-  );
-  const place = { institutionId: institution?.id ?? null, campusId: roster.section.campusId };
+  const place = { branchId: roster.section.branchId };
   const canMark = canAt(me, 'attendance.record.mark', place) && !roster.blocked;
   const isPast = roster.date < roster.today;
   const needsReason = isPast && roster.marked;
@@ -38,10 +32,10 @@ export default async function MarkAttendancePage({
     <>
       <PageHeader
         back={{
-          href: `/attendance?${new URLSearchParams({ campusId: roster.section.campusId, date: roster.date })}`,
+          href: `/attendance?${new URLSearchParams({ branchId: roster.section.branchId, date: roster.date })}`,
           label: 'Back to attendance',
         }}
-        title={`Attendance · ${roster.section.name}`}
+        title={`Attendance · ${roster.section.label}`}
         description={`${roster.date === roster.today ? 'Today' : roster.date}${roster.academicYear ? ` · ${roster.academicYear.name}` : ''}${roster.lastMarkedBy ? ` · last saved by ${roster.lastMarkedBy.name}` : ''}`}
         actions={
           <div className="flex items-center gap-3 text-sm">

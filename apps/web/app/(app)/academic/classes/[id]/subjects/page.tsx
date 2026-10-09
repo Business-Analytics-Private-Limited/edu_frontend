@@ -3,7 +3,8 @@
  *   - inherited: attached to a class above this one (e.g. on "MPC" for "MPC -> Section A");
  *     change those on that class's page;
  *   - own: ticked here; the classes below this one will inherit them.
- * Changing them needs "academic.structure.update" at the class's campus.
+ * Changing them needs "academic.structure.update" where the class belongs: the whole
+ * organization, or the branch of a section.
  */
 import {
   ActionForm,
@@ -16,21 +17,14 @@ import {
   PageHeader,
 } from '@eduplatform/ui';
 import { api } from '../../../../../../lib/api';
-import { can, canAt, getMe } from '../../../../../../lib/me';
-import type { ClassSubjects, Institution } from '../../../../../../lib/types';
+import { canAt, getMe } from '../../../../../../lib/me';
+import type { ClassSubjects } from '../../../../../../lib/types';
 import { setClassSubjects } from '../../../actions';
 
 export default async function ClassSubjectsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const me = await getMe();
-  const [data, institutions] = await Promise.all([
-    api<ClassSubjects>(`/classes/${id}/subjects`),
-    can(me, 'platform.institution.view') ? api<Institution[]>('/institutions') : [],
-  ]);
-  const institution = institutions.find((i) =>
-    i.campuses.some((c) => c.id === data.class.campusId),
-  );
-  const place = { institutionId: institution?.id ?? null, campusId: data.class.campusId };
+  const [me, data] = await Promise.all([getMe(), api<ClassSubjects>(`/classes/${id}/subjects`)]);
+  const place = { branchId: data.class.branchId };
   const canEdit = canAt(me, 'academic.structure.update', place);
   const own = new Set(data.own.map((s) => s.id));
   const inherited = new Set(data.inherited.map((i) => i.subject.id));
@@ -39,7 +33,14 @@ export default async function ClassSubjectsPage({ params }: { params: Promise<{ 
   return (
     <>
       <PageHeader
-        back={{ href: `/academic/classes?campus=${data.class.campusId}`, label: 'Back to classes' }}
+        back={
+          data.class.branchId
+            ? {
+                href: `/academic/sections?branch=${data.class.branchId}`,
+                label: 'Back to sections',
+              }
+            : { href: '/academic/structure', label: 'Back to the structure' }
+        }
         title={`Subjects · ${data.class.name}`}
         description={fullName}
       />
@@ -70,7 +71,7 @@ export default async function ClassSubjectsPage({ params }: { params: Promise<{ 
               <ActionForm action={setClassSubjects.bind(null, id)} submitLabel="Save subjects">
                 {data.available.length === 0 && (
                   <p className="text-sm text-muted-foreground">
-                    The institution has no subjects yet (Academic → Subjects).
+                    The organization has no subjects yet (Academic → Subjects).
                   </p>
                 )}
                 {data.available

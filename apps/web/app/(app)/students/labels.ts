@@ -8,11 +8,28 @@ export const GENDERS = {
   UNDISCLOSED: 'Prefer not to say',
 } as const;
 
+/** ACTIVE = a current student; the others are outgoing (ADR-0030). */
 export const STUDENT_STATUSES = {
-  ACTIVE: 'Active',
-  TRANSFERRED: 'Transferred',
+  ACTIVE: 'Current',
+  TRANSFERRED: 'Transferred (TC)',
   DISCONTINUED: 'Discontinued',
-  ALUMNI: 'Alumni',
+  COMPLETED: 'Completed',
+} as const;
+
+/** How a student can leave: becomes outgoing. */
+export const LEAVING_STATUSES = {
+  TRANSFERRED: 'Transferred (took a TC)',
+  DISCONTINUED: 'Discontinued (dropped out)',
+  COMPLETED: 'Completed (finished the final year)',
+} as const;
+
+/** A placement's status, for the timeline. */
+export const ENROLMENT_STATUSES = {
+  ACTIVE: 'Current',
+  MOVED: 'Moved',
+  PROMOTED: 'Promoted',
+  COMPLETED: 'Completed',
+  LEFT: 'Left',
 } as const;
 
 export const RELATIONS = {
@@ -21,8 +38,3 @@ export const RELATIONS = {
   GUARDIAN: 'Guardian',
   OTHER: 'Other',
 } as const;
-
-/** "MPC › Section A" from a section and its parent. */
-export function sectionLabel(section: { name: string; parent: { name: string } | null }) {
-  return section.parent ? `${section.parent.name} › ${section.name}` : section.name;
-}

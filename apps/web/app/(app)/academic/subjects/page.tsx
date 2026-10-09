@@ -1,7 +1,7 @@
 /**
- * /academic/subjects: each institution's subject list (Mathematics, Physics, ...).
+ * /academic/subjects: the organization's subject list (Mathematics, Physics, ...).
  * Which class has which subject is set on a class's page (Classes -> Subjects).
- * Managing the list needs "academic.subject.*" for the institution; a subject that classes use
+ * Managing the list needs "academic.subject.*" for the whole organization; a subject that classes use
  * can't be deleted, but can be marked "not in use".
  */
 import {
@@ -14,26 +14,21 @@ import {
   Field,
   Input,
   PageHeader,
-  Select,
   Table,
   TableHead,
   Td,
   Th,
 } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
-import { can, canAt, getMe } from '../../../../lib/me';
-import type { Institution, SubjectListItem } from '../../../../lib/types';
+import { canAt, getMe } from '../../../../lib/me';
+import type { SubjectListItem } from '../../../../lib/types';
 import { createSubject, deleteSubject, setSubjectInUse } from '../actions';
 
 export default async function SubjectsPage() {
   const me = await getMe();
-  const [subjects, institutions] = await Promise.all([
-    api<SubjectListItem[]>('/subjects'),
-    can(me, 'platform.institution.view') ? api<Institution[]>('/institutions') : [],
-  ]);
-  const canCreateIn = institutions.filter((i) =>
-    canAt(me, 'academic.subject.create', { institutionId: i.id }),
-  );
+  const subjects = await api<SubjectListItem[]>('/subjects');
+  const organization = {};
+  const canCreate = canAt(me, 'academic.subject.create', organization);
 
   return (
     <>
@@ -46,7 +41,6 @@ export default async function SubjectsPage() {
           <Table>
             <TableHead>
               <tr>
-                <Th>Institution</Th>
                 <Th>Subject</Th>
                 <Th>Used by</Th>
                 <Th>Status</Th>
@@ -55,10 +49,9 @@ export default async function SubjectsPage() {
             </TableHead>
             <tbody>
               {subjects.map((subject) => {
-                const here = { institutionId: subject.institutionId };
+                const here = organization;
                 return (
                   <tr key={subject.id}>
-                    <Td>{subject.institution.name}</Td>
                     <Td>
                       <span className="font-medium">{subject.name}</span>
                       <span className="ml-2 text-xs text-muted-foreground">{subject.code}</span>
@@ -87,7 +80,7 @@ export default async function SubjectsPage() {
                               submitLabel="Delete"
                               pendingLabel="…"
                               confirmMessage={`Delete ${subject.name}?`}
-                              submitVariant="ghost"
+                              submitVariant="destructive"
                               submitSize="sm"
                             />
                           )}
@@ -98,7 +91,7 @@ export default async function SubjectsPage() {
               })}
               {subjects.length === 0 && (
                 <tr>
-                  <Td colSpan={5} className="py-8 text-center text-muted-foreground">
+                  <Td colSpan={4} className="py-8 text-center text-muted-foreground">
                     No subjects yet.
                   </Td>
                 </tr>
@@ -107,26 +100,17 @@ export default async function SubjectsPage() {
           </Table>
         </div>
 
-        {canCreateIn.length > 0 && (
+        {canCreate && (
           <Card>
             <CardHeader>
               <CardTitle>Add subject</CardTitle>
             </CardHeader>
             <CardContent>
               <ActionForm action={createSubject} submitLabel="Add subject" resetOnSuccess>
-                <Field label="Institution" htmlFor="institutionId">
-                  <Select id="institutionId" name="institutionId" required>
-                    {canCreateIn.map((i) => (
-                      <option key={i.id} value={i.id}>
-                        {i.name}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
                 <Field label="Name" htmlFor="subjectName">
                   <Input id="subjectName" name="name" required placeholder="Mathematics" />
                 </Field>
-                <Field label="Code" htmlFor="subjectCode" hint="Unique in the institution">
+                <Field label="Code" htmlFor="subjectCode" hint="Unique in the organization">
                   <Input
                     id="subjectCode"
                     name="code"

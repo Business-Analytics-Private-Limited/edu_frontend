@@ -1,7 +1,8 @@
 'use server';
 /**
  * Server actions for organizations: what runs on the server when a super admin sends a form
- * (create an organization, switch a module, suspend / activate, add or delete an institution).
+ * (create an organization with its type and branches, change its type / code, switch a module,
+ * suspend / activate, add / close / reopen / delete a branch; ADR-0030).
  * Each returns a message for the form to show; on success the page is refreshed.
  */
 import { revalidatePath } from 'next/cache';
@@ -17,14 +18,14 @@ function text(form: FormData, name: string): string | undefined {
 }
 
 /**
- * The institutions typed on the "new organization" form: rows institutionName1 / institutionCode1,
- * institutionName2 / ...; empty rows are skipped. Codes are sent in capitals.
+ * The branches typed on the "new organization" form: rows branchName1 / branchCode1,
+ * branchName2 / ...; empty rows are skipped. Codes are sent in capitals.
  */
-function institutionsOf(form: FormData): { name?: string; code?: string }[] {
+function branchesOf(form: FormData): { name?: string; code?: string }[] {
   const rows = [];
-  for (let i = 1; form.has(`institutionName${i}`); i++) {
-    const name = text(form, `institutionName${i}`);
-    const code = text(form, `institutionCode${i}`)?.toUpperCase();
+  for (let i = 1; form.has(`branchName${i}`); i++) {
+    const name = text(form, `branchName${i}`);
+    const code = text(form, `branchCode${i}`)?.toUpperCase();
     if (name || code) rows.push({ name, code });
   }
   return rows;
@@ -38,6 +39,8 @@ export async function createOrganization(_previous: FormState, form: FormData): 
       body: {
         name: text(form, 'name'),
         slug: text(form, 'slug'),
+        code: text(form, 'code')?.toUpperCase(),
+        type: text(form, 'type'),
         contactName: text(form, 'contactName'),
         contactEmail: text(form, 'contactEmail'),
         contactPhone: text(form, 'contactPhone'),
@@ -46,7 +49,7 @@ export async function createOrganization(_previous: FormState, form: FormData): 
           email: text(form, 'adminEmail'),
           password: text(form, 'adminPassword'),
         },
-        institutions: institutionsOf(form),
+        branches: branchesOf(form),
       },
     });
   } catch (error) {
@@ -93,56 +96,70 @@ export async function setStatus(
   };
 }
 
-export async function addInstitution(
+export async function addBranch(
   organizationId: string,
   _previous: FormState,
   form: FormData,
 ): Promise<FormState> {
   try {
-    await api(`/super-admin/organizations/${organizationId}/institutions`, {
+    await api(`/super-admin/organizations/${organizationId}/branches`, {
       method: 'POST',
       body: { name: text(form, 'name'), code: text(form, 'code')?.toUpperCase() },
     });
   } catch (error) {
-    return { error: error instanceof ApiError ? error.message : 'Could not add the institution' };
+    return { error: error instanceof ApiError ? error.message : 'Could not add the branch' };
   }
   revalidatePath(`/organizations/${organizationId}`);
-  return { success: 'Institution added' };
+  return { success: 'Branch added' };
 }
 
-export async function deleteInstitution(
-  organizationId: string,
-  institutionId: string,
-): Promise<FormState> {
+export async function deleteBranch(organizationId: string, branchId: string): Promise<FormState> {
   try {
-    await api(`/super-admin/organizations/${organizationId}/institutions/${institutionId}`, {
+    await api(`/super-admin/organizations/${organizationId}/branches/${branchId}`, {
       method: 'DELETE',
     });
   } catch (error) {
-    return {
-      error: error instanceof ApiError ? error.message : 'Could not delete the institution',
-    };
+    return { error: error instanceof ApiError ? error.message : 'Could not delete the branch' };
   }
   revalidatePath(`/organizations/${organizationId}`);
-  return { success: 'Institution deleted' };
+  return { success: 'Branch deleted' };
 }
 
-/** Closes or reopens an institution (ADR-0026). */
-export async function setInstitutionStatus(
+/** Closes or reopens a branch (ADR-0026). */
+export async function setBranchStatus(
   organizationId: string,
-  institutionId: string,
+  branchId: string,
   action: 'deactivate' | 'activate',
 ): Promise<FormState> {
   try {
-    await api(
-      `/super-admin/organizations/${organizationId}/institutions/${institutionId}/${action}`,
-      {
-        method: 'POST',
-      },
-    );
+    await api(`/super-admin/organizations/${organizationId}/branches/${branchId}/${action}`, {
+      method: 'POST',
+    });
   } catch (error) {
     return { error: error instanceof ApiError ? error.message : `Could not ${action} it` };
   }
   revalidatePath(`/organizations/${organizationId}`);
-  return { success: action === 'deactivate' ? 'Institution closed' : 'Institution opened again' };
+  return { success: action === 'deactivate' ? 'Branch closed' : 'Branch opened again' };
+}
+
+/** The organization's name, code and type (the type only while it has no structure yet). */
+export async function updateOrganization(
+  organizationId: string,
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  try {
+    await api(`/super-admin/organizations/${organizationId}`, {
+      method: 'PATCH',
+      body: {
+        name: text(form, 'name'),
+        code: text(form, 'code')?.toUpperCase(),
+        type: text(form, 'type'),
+      },
+    });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : 'Could not save' };
+  }
+  revalidatePath(`/organizations/${organizationId}`);
+  return { success: 'Saved' };
 }

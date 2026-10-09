@@ -1,6 +1,7 @@
 /**
- * /organization: the organization's details and the modules it has.
- * Users with "platform.organization.update" can edit the contact details.
+ * /organization: the organization's details, its type (which shapes the academic structure,
+ * ADR-0030) and the modules it has. Users with "platform.organization.update" can edit the
+ * contact details; the type, code and branches are set by EduPlatform.
  */
 import {
   ActionForm,
@@ -15,6 +16,7 @@ import {
   PageHeader,
 } from '@eduplatform/ui';
 import { api } from '../../../lib/api';
+import { ORGANIZATION_TYPES } from '../../../lib/labels';
 import { canAt, getMe } from '../../../lib/me';
 import type { OwnOrganization } from '../../../lib/types';
 import { updateOrganization } from './actions';
@@ -25,9 +27,37 @@ export default async function OrganizationPage() {
 
   return (
     <>
-      <PageHeader title={org.name} description={`Slug: ${org.slug}`} />
+      <PageHeader
+        title={org.name}
+        description={`${ORGANIZATION_TYPES[org.type]} · code ${org.code}`}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Type and structure</CardTitle>
+            <CardDescription>
+              Set by EduPlatform; they decide how classes are organized.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-2 gap-y-2 text-sm">
+              <dt className="text-muted-foreground">Type</dt>
+              <dd>{ORGANIZATION_TYPES[org.type]}</dd>
+              <dt className="text-muted-foreground">Code</dt>
+              <dd>{org.code}</dd>
+              <dt className="text-muted-foreground">Structure</dt>
+              <dd>{org.levelNames.join(' › ')}</dd>
+              <dt className="text-muted-foreground">Admission numbers</dt>
+              <dd>
+                {org.admissionNumbering === 'AUTOMATIC'
+                  ? `Automatic (${org.admissionNoPattern})`
+                  : 'Typed in'}
+              </dd>
+            </dl>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Contact</CardTitle>

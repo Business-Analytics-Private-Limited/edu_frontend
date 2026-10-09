@@ -2,7 +2,7 @@
  * /users/:id: one user, their roles and where each applies.
  *
  * With "access.user.update" at the right place you can give another role (e.g. Senior faculty
- * at a second campus), take a role away, rename or deactivate the user. Renaming and
+ * at a second branch), take a role away, rename or deactivate the user. Renaming and
  * deactivating affect the user everywhere, so the API allows them only if all the user's roles
  * are within your reach.
  */
@@ -23,7 +23,7 @@ import {
 } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
 import { can, canAt, getMe } from '../../../../lib/me';
-import type { Institution, Role, User } from '../../../../lib/types';
+import type { Branch, Role, User } from '../../../../lib/types';
 import { addRole, removeRole, renameUser, setUserStatus } from '../actions';
 import { PlaceSelect, placeLabel, RoleSelect } from '../place';
 
@@ -31,17 +31,14 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const [me, user] = await Promise.all([getMe(), api<User>(`/users/${id}`)]);
   const canUpdate = can(me, 'access.user.update');
-  const [roles, institutions] = canUpdate
+  const [roles, branches] = canUpdate
     ? await Promise.all([
         api<Role[]>('/roles'),
-        can(me, 'platform.institution.view') ? api<Institution[]>('/institutions') : [],
+        can(me, 'platform.branch.view') ? api<Branch[]>('/branches') : [],
       ])
     : [[], []];
   const active = user.status === 'ACTIVE';
-  const placeOf = (r: User['roles'][number]) => ({
-    institutionId: r.institution?.id ?? null,
-    campusId: r.campus?.id ?? null,
-  });
+  const placeOf = (r: User['roles'][number]) => ({ branchId: r.branch?.id ?? null });
   // Name and status affect the user everywhere: only when all their places are yours.
   const managesWholeUser =
     canUpdate && user.roles.every((r) => canAt(me, 'access.user.update', placeOf(r)));
@@ -111,7 +108,7 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
             <CardContent>
               <ActionForm action={addRole.bind(null, user.id)} submitLabel="Add role">
                 <RoleSelect roles={roles} />
-                <PlaceSelect institutions={institutions} me={me} permission="access.user.update" />
+                <PlaceSelect branches={branches} me={me} permission="access.user.update" />
               </ActionForm>
             </CardContent>
           </Card>
@@ -131,7 +128,7 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
             ) : (
               <p className="text-sm text-muted-foreground">
                 {canUpdate
-                  ? 'This user also works outside your campus / institution, so only their admin there can rename or deactivate them.'
+                  ? 'This user also works outside your branch, so only their admin there can rename or deactivate them.'
                   : user.name}
               </p>
             )}

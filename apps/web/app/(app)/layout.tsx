@@ -6,7 +6,6 @@
  */
 import { AppShell, Button, UserBadge, type NavItem } from '@eduplatform/ui';
 import {
-  ArrowLeftRight,
   BarChart3,
   ArrowUpRight,
   BookOpen,
@@ -42,10 +41,10 @@ const MENU: (NavItem & { permission?: string })[] = [
     permission: 'platform.organization.view',
   },
   {
-    href: '/institutions',
-    label: 'Institutions',
+    href: '/branches',
+    label: 'Branches',
     icon: <Building />,
-    permission: 'platform.institution.view',
+    permission: 'platform.branch.view',
   },
   { href: '/users', label: 'Users', icon: <Users />, permission: 'access.user.view' },
   { href: '/roles', label: 'Roles', icon: <ShieldCheck />, permission: 'access.role.view' },
@@ -71,12 +70,6 @@ const STUDENTS_MENU: (NavItem & { permission: string })[] = [
     label: 'Promote',
     icon: <ArrowUpRight />,
     permission: 'students.enrolment.promote',
-  },
-  {
-    href: '/students/move',
-    label: 'Move students',
-    icon: <ArrowLeftRight />,
-    permission: 'students.enrolment.transfer',
   },
   {
     href: '/students/import',
@@ -123,16 +116,16 @@ const ACADEMIC_MENU: (NavItem & { permission: string })[] = [
     permission: 'academic.year.view',
   },
   {
-    href: '/academic/classes',
-    label: 'Classes',
+    href: '/academic/structure',
+    label: 'Structure',
     icon: <Network />,
     permission: 'academic.structure.view',
   },
   {
-    href: '/academic/batches',
-    label: 'Batches',
+    href: '/academic/sections',
+    label: 'Sections',
     icon: <Layers />,
-    permission: 'academic.batch.view',
+    permission: 'academic.structure.view',
   },
   {
     href: '/academic/subjects',

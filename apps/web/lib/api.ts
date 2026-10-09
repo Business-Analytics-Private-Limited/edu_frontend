@@ -2,8 +2,8 @@
  * Calls the backend API from the Next.js SERVER (pages and actions), with the logged-in
  * person's token.
  *
- *   const institutions = await api<Institution[]>('/institutions');
- *   await api('/institutions', { method: 'POST', body: { name, code, type } });
+ *   const branches = await api<Branch[]>('/branches');
+ *   await api('/subjects', { method: 'POST', body: { name, code } });
  *
  * - 401 (not logged in / session ended): goes to /logout, which clears the cookie and shows login.
  * - 403 "Change your temporary password first": goes to /change-password (ADR-0028).

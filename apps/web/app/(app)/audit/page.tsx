@@ -1,13 +1,13 @@
 /**
  * /audit: who changed what, where, and when; newest first.
- * Organization-wide admins see everything; a Principal / Campus admin sees only the changes in
- * their own institution / campus (the API filters it).
+ * Organization-wide admins see everything; a Principal / Branch admin sees only the changes at
+ * their own branch (the API filters it).
  */
 import { PageHeader, Table, TableHead, Td, Th } from '@eduplatform/ui';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
 import { can, getMe } from '../../../lib/me';
-import type { AuditLog, Institution, Page } from '../../../lib/types';
+import type { AuditLog, Branch, Page } from '../../../lib/types';
 
 export default async function AuditPage({
   searchParams,
@@ -16,21 +16,16 @@ export default async function AuditPage({
 }) {
   const { page = '1' } = await searchParams;
   const me = await getMe();
-  const [result, institutions] = await Promise.all([
+  const [result, branches] = await Promise.all([
     api<Page<AuditLog>>(`/audit-logs?page=${Number(page) || 1}&pageSize=50`),
-    // For place names; only if the user may see institutions (otherwise the ids stay unnamed).
-    can(me, 'platform.institution.view') ? api<Institution[]>('/institutions') : [],
+    // For branch names; only if the user may see branches (otherwise the ids stay unnamed).
+    can(me, 'platform.branch.view') ? api<Branch[]>('/branches') : [],
   ]);
 
-  // Names for the "Where" column, from the institutions and campuses the user may see.
-  const names = new Map<string, string>();
-  for (const institution of institutions) {
-    names.set(institution.id, institution.name);
-    for (const campus of institution.campuses) names.set(campus.id, campus.name);
-  }
+  // Names for the "Where" column, from the branches the user may see.
+  const names = new Map(branches.map((b) => [b.id, b.name]));
   const where = (log: AuditLog) => {
-    if (log.campusId) return names.get(log.campusId) ?? 'A campus';
-    if (log.institutionId) return names.get(log.institutionId) ?? 'An institution';
+    if (log.branchId) return names.get(log.branchId) ?? 'A branch';
     return 'Whole organization';
   };
   const pages = Math.max(1, Math.ceil(result.total / result.pageSize));

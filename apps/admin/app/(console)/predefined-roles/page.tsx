@@ -1,9 +1,9 @@
 /**
  * /predefined-roles: the roles every organization has (Organization admin, Director, ...).
- * Only the super admin changes their permissions; a change applies to all organizations.
- * Organizations can't change them, but they can add their own roles.
+ * The super admin sets their default permissions and can create more (ADR-0030); each
+ * organization may change its own copy (customized, ADR-0029) and add its own roles.
  */
-import { Badge, PageHeader, Table, TableHead, Td, Th } from '@eduplatform/ui';
+import { Badge, Button, PageHeader, Table, TableHead, Td, Th } from '@eduplatform/ui';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
 import type { PredefinedRole } from '../../../lib/types';
@@ -16,6 +16,11 @@ export default async function PredefinedRolesPage() {
       <PageHeader
         title="Predefined roles"
         description="Every organization has these roles. Your changes apply to all organizations at once, except those that changed the role themselves (customized)."
+        actions={
+          <Button asChild>
+            <Link href="/predefined-roles/new">New predefined role</Link>
+          </Button>
+        }
       />
       <Table>
         <TableHead>
@@ -37,6 +42,11 @@ export default async function PredefinedRolesPage() {
                 >
                   {role.name}
                 </Link>
+                {!role.builtIn && (
+                  <Badge variant="outline" className="ml-2">
+                    added here
+                  </Badge>
+                )}
               </Td>
               <Td className="text-muted-foreground">{role.description}</Td>
               <Td>{role.permissions.length}</Td>

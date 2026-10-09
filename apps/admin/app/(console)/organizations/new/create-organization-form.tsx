@@ -1,7 +1,7 @@
 /**
- * The "new organization" form: the organization's details, its institutions and its first
- * admin's login. Only the super admin adds institutions (ADR-0025); more can be added later on
- * the organization's page.
+ * The "new organization" form (ADR-0030): the organization's details and TYPE (it decides the
+ * academic structure), its branches and its first admin's login. Only the super admin adds
+ * branches; more can be added later on the organization's page.
  */
 import {
   ActionForm,
@@ -12,8 +12,10 @@ import {
   CardTitle,
   Field,
   Input,
+  Select,
 } from '@eduplatform/ui';
 import { Fragment } from 'react';
+import { ORGANIZATION_TYPES } from '../../../../lib/types';
 import { createOrganization } from '../actions';
 
 export function CreateOrganizationForm() {
@@ -46,6 +48,18 @@ export function CreateOrganizationForm() {
               placeholder="sri-vidya"
             />
           </Field>
+          <Field label="Type" htmlFor="type" hint="Decides how its classes are organized">
+            <Select id="type" name="type" required defaultValue="INTERMEDIATE">
+              {Object.entries(ORGANIZATION_TYPES).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Code" htmlFor="code" hint="Used in admission numbers, e.g. SVJC">
+            <Input id="code" name="code" required pattern="[A-Za-z0-9]{2,10}" placeholder="SVJC" />
+          </Field>
           <Field label="Contact person" htmlFor="contactName">
             <Input id="contactName" name="contactName" />
           </Field>
@@ -60,35 +74,34 @@ export function CreateOrganizationForm() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Institutions</CardTitle>
+          <CardTitle>Branches</CardTitle>
           <CardDescription>
-            Its colleges or schools: at least one. Each sets up its own class levels later. More can
-            be added on the organization's page.
+            Its locations: at least one. More can be added on the organization&apos;s page.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-[2fr_1fr]">
-          {[1, 2, 3].map((row) => (
+          {[1, 2, 3, 4, 5].map((row) => (
             <Fragment key={row}>
-              <Field label={`Institution ${row} name`} htmlFor={`institutionName${row}`}>
+              <Field label={`Branch ${row} name`} htmlFor={`branchName${row}`}>
                 <Input
-                  id={`institutionName${row}`}
-                  name={`institutionName${row}`}
+                  id={`branchName${row}`}
+                  name={`branchName${row}`}
                   required={row === 1}
                   minLength={2}
-                  placeholder={row === 1 ? 'Sri Vidya Junior College' : 'Optional'}
+                  placeholder={row === 1 ? 'KPHB' : 'Optional'}
                 />
               </Field>
               <Field
                 label="Code"
-                htmlFor={`institutionCode${row}`}
+                htmlFor={`branchCode${row}`}
                 hint={row === 1 ? 'Capital letters, digits, _ and -' : undefined}
               >
                 <Input
-                  id={`institutionCode${row}`}
-                  name={`institutionCode${row}`}
+                  id={`branchCode${row}`}
+                  name={`branchCode${row}`}
                   required={row === 1}
                   pattern="[A-Za-z0-9_\-]{2,20}"
-                  placeholder={row === 1 ? 'SVJC' : ''}
+                  placeholder={row === 1 ? 'KPHB' : ''}
                 />
               </Field>
             </Fragment>
@@ -100,7 +113,7 @@ export function CreateOrganizationForm() {
         <CardHeader>
           <CardTitle>First admin</CardTitle>
           <CardDescription>
-            Logs in to the web app with this email and password, and should change the password.
+            Logs in to the web app with this email and a temporary password, then chooses their own.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">

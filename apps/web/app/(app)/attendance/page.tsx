@@ -1,7 +1,7 @@
 /**
- * /attendance?campusId=&date= : a campus's day at a glance. Every section with its number of
+ * /attendance?branchId=&date= : a branch's day at a glance. Every section with its number of
  * students, whether attendance is marked, and the counts; "Mark" / "Open" goes to the register.
- * Defaults: your first campus, today (in the institution's time zone).
+ * Defaults: your first branch, today (in the organization's time zone).
  */
 import {
   Badge,
@@ -20,75 +20,64 @@ import { ClipboardCheck } from 'lucide-react';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
 import { can, canAt, getMe } from '../../../lib/me';
-import type { DailySummary, Institution } from '../../../lib/types';
+import type { Branch, DailySummary } from '../../../lib/types';
 import { shiftDay, STATUSES } from './labels';
-import { placeName } from '../../../lib/places';
+import { branchName } from '../../../lib/places';
 
 export default async function AttendanceTodayPage({
   searchParams,
 }: {
-  searchParams: Promise<{ campusId?: string; date?: string }>;
+  searchParams: Promise<{ branchId?: string; date?: string }>;
 }) {
   const params = await searchParams;
   const me = await getMe();
-  const institutions = can(me, 'platform.institution.view')
-    ? await api<Institution[]>('/institutions')
-    : [];
-  const campuses = institutions.flatMap((i) =>
-    i.campuses
-      .filter((c) => {
-        const place = { institutionId: i.id, campusId: c.id };
-        return (
-          canAt(me, 'attendance.record.view', place) || canAt(me, 'attendance.record.mark', place)
-        );
-      })
-      .map((c) => ({ ...c, institution: i })),
+  const branches = (can(me, 'platform.branch.view') ? await api<Branch[]>('/branches') : []).filter(
+    (b) =>
+      canAt(me, 'attendance.record.view', { branchId: b.id }) ||
+      canAt(me, 'attendance.record.mark', { branchId: b.id }),
   );
-  const campus = campuses.find((c) => c.id === params.campusId) ?? campuses[0];
-  if (!campus) {
+  const branch = branches.find((b) => b.id === params.branchId) ?? branches[0];
+  if (!branch) {
     return (
       <>
         <PageHeader title="Attendance" />
         <EmptyState
           icon={<ClipboardCheck />}
-          title="No campus"
-          description="Your roles don't include attendance at any campus."
+          title="No branch"
+          description="Your roles do not include attendance at any branch."
         />
       </>
     );
   }
 
-  // Without a date: ask the API for today's (it knows the institution's time zone).
+  // Without a date: ask the API for today's (it knows the organization's time zone).
   const first = await api<DailySummary>(
-    `/attendance/daily-summary?${new URLSearchParams({ campusId: campus.id, date: params.date ?? new Date().toISOString().slice(0, 10) })}`,
+    `/attendance/daily-summary?${new URLSearchParams({ branchId: branch.id, date: params.date ?? new Date().toISOString().slice(0, 10) })}`,
   );
   const summary =
     params.date || first.date === first.today
       ? first
       : await api<DailySummary>(
-          `/attendance/daily-summary?${new URLSearchParams({ campusId: campus.id, date: first.today })}`,
+          `/attendance/daily-summary?${new URLSearchParams({ branchId: branch.id, date: first.today })}`,
         );
   const link = (date: string) =>
-    `/attendance?${new URLSearchParams({ campusId: campus.id, date })}`;
-  const canMark = canAt(me, 'attendance.record.mark', {
-    institutionId: campus.institution.id,
-    campusId: campus.id,
-  });
+    `/attendance?${new URLSearchParams({ branchId: branch.id, date })}`;
+  const canMark = canAt(me, 'attendance.record.mark', { branchId: branch.id });
 
   return (
     <>
       <PageHeader
         title="Attendance"
-        description={`${campus.name} · ${summary.date === summary.today ? 'today' : summary.date}${summary.academicYear ? ` · ${summary.academicYear.name}` : ''}`}
+        description={`${branch.name} · ${summary.date === summary.today ? 'today' : summary.date}${summary.academicYear ? ` · ${summary.academicYear.name}` : ''}`}
       />
 
       <form className="mb-4 flex flex-wrap items-end gap-3">
-        {campuses.length > 1 && (
-          <Field label="Campus" htmlFor="campusId">
-            <Select id="campusId" name="campusId" defaultValue={campus.id} className="w-56">
-              {campuses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {placeName(c, c.institution)} ({c.institution.code})
+        {branches.length > 1 && (
+          <Field label="Branch" htmlFor="branchId">
+            <Select id="branchId" name="branchId" defaultValue={branch.id} className="w-56">
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {branchName(b)}
                 </option>
               ))}
             </Select>
@@ -170,7 +159,7 @@ export default async function AttendanceTodayPage({
           {summary.sections.length === 0 && (
             <tr>
               <Td colSpan={9} className="py-8 text-center text-muted-foreground">
-                No sections with students on this campus
+                No sections with students at this branch
                 {summary.academicYear ? '' : ' (no academic year covers this day)'}.
               </Td>
             </tr>

@@ -1,14 +1,16 @@
 /**
- * /students/settings: per institution, how admission numbers are made, and which documents
- * are collected from students (document types: required? visible to parents in the portal?).
- * With a pattern, an admission (or import row) with an empty admission number gets the next
- * number; numbers typed by hand still work. Needs "students.settings.update" for the institution.
+ * /students/settings: for the whole organization (ADR-0030):
+ *   - admission numbers: AUTOMATIC (from a pattern; typed numbers are ignored) or typed in
+ *     (MANUAL; required in the form and the import sheet);
+ *   - the documents collected from students (document types: required? visible to parents?).
+ * Needs "students.settings.update" for the whole organization (the Organization admin).
  */
 import {
   ActionForm,
   Badge,
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
   Checkbox,
@@ -16,11 +18,12 @@ import {
   Field,
   Input,
   PageHeader,
+  Select,
 } from '@eduplatform/ui';
 import { Settings } from 'lucide-react';
 import { api } from '../../../../lib/api';
-import { can, canAt, getMe } from '../../../../lib/me';
-import type { DocumentType, Institution } from '../../../../lib/types';
+import { canAt, getMe } from '../../../../lib/me';
+import type { DocumentType, OwnOrganization } from '../../../../lib/types';
 import {
   createDocumentType,
   deleteDocumentType,
@@ -30,75 +33,75 @@ import {
 
 export default async function StudentSettingsPage() {
   const me = await getMe();
-  const institutions = (
-    can(me, 'platform.institution.view') ? await api<Institution[]>('/institutions') : []
-  ).filter((i) => canAt(me, 'students.settings.update', { institutionId: i.id }));
-
-  if (institutions.length === 0) {
+  if (!canAt(me, 'students.settings.update', {})) {
     return (
       <>
-        <PageHeader
-          back={{ href: '/students', label: 'Back to students' }}
-          title="Student settings"
-        />
+        <PageHeader title="Student settings" />
         <EmptyState
           icon={<Settings />}
-          title="Nothing to set"
-          description="Your roles don't allow changing student settings for any institution."
+          title="Nothing to set up here"
+          description="Student settings are for the whole organization (the Organization admin)."
         />
       </>
     );
   }
-
-  const documentTypes = can(me, 'students.document.view')
-    ? await api<DocumentType[]>('/document-types')
-    : [];
+  const [organization, documentTypes] = await Promise.all([
+    api<OwnOrganization>('/organization'),
+    api<DocumentType[]>('/document-types'),
+  ]);
 
   return (
     <>
-      <PageHeader
-        back={{ href: '/students', label: 'Back to students' }}
-        title="Student settings"
-        description="Automatic admission numbers, per institution."
-      />
+      <PageHeader title="Student settings" description="For the whole organization." />
       <div className="grid gap-6 lg:grid-cols-2">
-        {institutions.map((institution) => (
-          <Card key={institution.id}>
-            <CardHeader>
-              <CardTitle>{institution.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ActionForm action={setNumbering.bind(null, institution.id)} submitLabel="Save">
-                <Field
-                  label="Admission number pattern"
-                  htmlFor={`pattern-${institution.id}`}
-                  hint="{CODE} = institution code, {YY} or {YYYY} = year (restarts every year), {SEQ:4} = running number. Empty = typed by hand."
-                >
-                  <Input
-                    id={`pattern-${institution.id}`}
-                    name="pattern"
-                    defaultValue={institution.admissionNoPattern ?? ''}
-                    placeholder="{CODE}{YY}{SEQ:4}"
-                  />
-                </Field>
-              </ActionForm>
-              <DocumentTypes
-                institutionId={institution.id}
-                types={documentTypes.filter((t) => t.institutionId === institution.id)}
-              />
-            </CardContent>
-          </Card>
-        ))}
+        <Card>
+          <CardHeader>
+            <CardTitle>Admission numbers</CardTitle>
+            <CardDescription>
+              Changing this never renumbers students who are already admitted.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ActionForm action={setNumbering} submitLabel="Save">
+              <Field label="How" htmlFor="mode">
+                <Select id="mode" name="mode" defaultValue={organization.admissionNumbering}>
+                  <option value="MANUAL">Typed in (form and import sheet)</option>
+                  <option value="AUTOMATIC">Automatic, from a pattern</option>
+                </Select>
+              </Field>
+              <Field
+                label="Pattern (automatic)"
+                htmlFor="pattern"
+                hint={`{CODE} = ${organization.code}, {BRANCH} = branch code (a counter per branch), {YY} or {YYYY} = year (restarts every year), {SEQ:4} = running number`}
+              >
+                <Input
+                  id="pattern"
+                  name="pattern"
+                  defaultValue={organization.admissionNoPattern ?? ''}
+                  placeholder="{CODE}{YY}{SEQ:4}"
+                />
+              </Field>
+            </ActionForm>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Documents collected from students</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DocumentTypes types={documentTypes} />
+          </CardContent>
+        </Card>
       </div>
     </>
   );
 }
 
-/** The institution's document types with switches, and a form to add one. */
-function DocumentTypes({ institutionId, types }: { institutionId: string; types: DocumentType[] }) {
+/** The organization's document types with switches, and a form to add one. */
+function DocumentTypes({ types }: { types: DocumentType[] }) {
   return (
-    <div className="mt-6 border-t pt-4">
-      <h3 className="mb-2 text-sm font-semibold">Documents collected from students</h3>
+    <>
       <ul className="mb-3 flex flex-col gap-2 text-sm">
         {types.length === 0 && <li className="text-muted-foreground">None yet.</li>}
         {types.map((t) => (
@@ -136,7 +139,7 @@ function DocumentTypes({ institutionId, types }: { institutionId: string; types:
                 submitLabel="Delete"
                 pendingLabel="…"
                 confirmMessage={`Delete the document type ${t.name}?`}
-                submitVariant="ghost"
+                submitVariant="destructive"
                 submitSize="sm"
               />
             )}
@@ -144,7 +147,7 @@ function DocumentTypes({ institutionId, types }: { institutionId: string; types:
         ))}
       </ul>
       <ActionForm
-        action={createDocumentType.bind(null, institutionId)}
+        action={createDocumentType}
         submitLabel="Add document type"
         submitSize="sm"
         resetOnSuccess
@@ -158,6 +161,6 @@ function DocumentTypes({ institutionId, types }: { institutionId: string; types:
         <Checkbox name="isRequired" label="Required" />
         <Checkbox name="visibleInPortal" label="Parents and students can see it in the portal" />
       </ActionForm>
-    </div>
+    </>
   );
 }

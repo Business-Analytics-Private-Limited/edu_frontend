@@ -1,7 +1,7 @@
 /**
  * The "Documents" card of a student's page: required types still missing, every document with
  * its status (uploaded / verified / rejected and why), download, verify / reject, delete, and an
- * upload form. Each button shows only where the user's roles allow it at the student's campus.
+ * upload form. Each button shows only where the user's roles allow it at the student's branch.
  */
 import {
   ActionForm,

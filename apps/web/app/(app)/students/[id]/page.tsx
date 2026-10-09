@@ -1,11 +1,13 @@
 /**
- * /students/:id: one student.
- *   - Profile (edit with "students.student.update" at the student's campus)
+ * /students/:id: one student (ADR-0030). Everything here is for ONE student at a time:
+ *   - Profile (edit with "students.student.update" at the student's branch), incl. lateral entry
  *   - Parents / guardians: add, make primary, remove
- *   - Sections: one per academic year; place in a section, change roll no, move to another
- *     section ("students.enrolment.transfer")
- *   - Status with its history (Active / Transferred / Discontinued / Alumni)
- *   - Delete: only for mistakes ("students.student.delete")
+ *   - Current placement: roll number; CHANGE SECTION or CHANGE BRANCH from a date, with a reason
+ *     ("students.enrolment.transfer"; a branch change needs it at both branches). The old
+ *     placement ends the day before and stays in the timeline.
+ *   - Timeline: every placement and status change, newest first
+ *   - MARK AS LEFT (becomes outgoing: transferred, discontinued, completed) / RE-ADMIT
+ *   - Documents, attendance, portal logins; Delete only for mistakes ("students.student.delete")
  */
 import {
   ActionForm,
@@ -19,18 +21,14 @@ import {
   Input,
   PageHeader,
   Select,
-  Table,
-  TableHead,
-  Td,
-  Th,
 } from '@eduplatform/ui';
+import { SectionPicker } from '../../../../components/section-picker';
 import { api } from '../../../../lib/api';
 import { can, canAt, getMe } from '../../../../lib/me';
-import { sectionOptions } from '../../../../lib/sections';
+import { pickerData } from '../../../../lib/structure';
 import type {
   AcademicYear,
-  Batch,
-  Institution,
+  Branch,
   DocumentType,
   StudentAttendance,
   StudentDocuments,
@@ -38,72 +36,64 @@ import type {
 } from '../../../../lib/types';
 import {
   addGuardian,
-  changeStatus,
+  changeBranch,
+  changeSection,
   deleteStudent,
   enrol,
-  makePrimaryGuardian,
   grantPortalAccess,
+  leaveStudent,
+  makePrimaryGuardian,
+  readmitStudent,
   removeGuardian,
   revokePortalAccess,
-  transferCampus,
   updateEnrolment,
   updateStudent,
 } from '../actions';
-import { GENDERS, RELATIONS, sectionLabel, STUDENT_STATUSES } from '../labels';
+import {
+  ENROLMENT_STATUSES,
+  GENDERS,
+  LEAVING_STATUSES,
+  RELATIONS,
+  STUDENT_STATUSES,
+} from '../labels';
 import { DocumentsCard } from './documents-card';
-import { campusesInUse } from '../../../../lib/places';
 
 const isoDate = (value: string) => value.slice(0, 10);
+const date = (value: string) => new Date(value).toLocaleDateString();
+const today = () => new Date().toISOString().slice(0, 10);
 
 export default async function StudentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [me, student] = await Promise.all([getMe(), api<StudentProfile>(`/students/${id}`)]);
-  const place = { institutionId: student.institutionId, campusId: student.campusId };
+  const place = { branchId: student.branchId };
+  const current = student.status === 'ACTIVE';
   const canEdit = canAt(me, 'students.student.update', place);
-  const canMove = canAt(me, 'students.enrolment.transfer', place);
-  const academic = me.enabledModules.includes('academic');
+  const canMove = current && canAt(me, 'students.enrolment.transfer', place);
+  const placement = student.enrolments.find((e) => e.status === 'ACTIVE');
+  const academic = me.enabledModules.includes('academic') && can(me, 'academic.structure.view');
 
-  const [years, batches, sections] =
-    academic && (canEdit || canMove)
-      ? await Promise.all([
-          can(me, 'academic.year.view')
-            ? api<AcademicYear[]>(`/academic-years?institutionId=${student.institutionId}`)
-            : [],
-          can(me, 'academic.batch.view')
-            ? api<Batch[]>(`/batches?institutionId=${student.institutionId}`)
-            : [],
-          can(me, 'academic.structure.view') ? sectionOptions([student.campusId]) : [],
-        ])
-      : [[], [], []];
-  // Other campuses of the same institution the student can move to (transfer allowed at both).
-  const otherCampuses =
-    canMove && can(me, 'platform.institution.view')
-      ? (await api<Institution[]>('/institutions'))
-          .filter((i) => i.id === student.institutionId)
-          .flatMap(campusesInUse)
-          .filter(
-            (c) =>
-              c.id !== student.campusId &&
-              canAt(me, 'students.enrolment.transfer', {
-                institutionId: student.institutionId,
-                campusId: c.id,
-              }),
-          )
+  // Branches a branch change can go to: open, with the transfer permission there too.
+  const otherBranches =
+    canMove && placement && can(me, 'platform.branch.view')
+      ? (await api<Branch[]>('/branches')).filter(
+          (b) =>
+            b.id !== student.branchId &&
+            b.status === 'ACTIVE' &&
+            canAt(me, 'students.enrolment.transfer', { branchId: b.id }),
+        )
       : [];
-  const otherSections =
-    otherCampuses.length > 0 && can(me, 'academic.structure.view')
-      ? await sectionOptions(otherCampuses.map((c) => c.id))
-      : [];
-  const hasCurrentSection = student.enrolments.some(
-    (e) => e.status === 'ACTIVE' && e.academicYear.status !== 'CLOSED',
-  );
-  // With a current section, only campuses that have sections to move into.
-  const targetCampuses = hasCurrentSection
-    ? otherCampuses.filter((c) => otherSections.some((s) => s.campusId === c.id))
-    : otherCampuses;
+  const needsPicker = academic && current && (canEdit || canMove);
+  const [years, picker] = needsPicker
+    ? await Promise.all([
+        can(me, 'academic.year.view') ? api<AcademicYear[]>('/academic-years') : [],
+        pickerData([student.branchId, ...otherBranches.map((b) => b.id)]),
+      ])
+    : [[], null];
+  const ownSections = picker?.sections.filter((s) => s.branchId === student.branchId) ?? [];
+  const openYears = years.filter((y) => y.status !== 'CLOSED');
 
   // Attendance of the last 30 days (Attendance module).
-  const until = new Date().toISOString().slice(0, 10);
+  const until = today();
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
   const attendance =
     me.enabledModules.includes('attendance') && canAt(me, 'attendance.record.view', place)
@@ -112,37 +102,38 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
         )
       : null;
 
-  // Documents (with the right to see them at this campus).
+  // Documents (with the right to see them at this branch).
   const canSeeDocuments = canAt(me, 'students.document.view', place);
   const [documents, documentTypes] = canSeeDocuments
     ? await Promise.all([
         api<StudentDocuments>(`/students/${student.id}/documents`),
-        api<DocumentType[]>(`/document-types?institutionId=${student.institutionId}`),
+        api<DocumentType[]>('/document-types'),
       ])
     : [null, []];
 
-  const yearsWithout = years.filter(
-    (y) => y.status !== 'CLOSED' && !student.enrolments.some((e) => e.academicYear.id === y.id),
-  );
+  const leaving = student.statusChanges.find((c) => c.toStatus === student.status);
 
   return (
     <>
       <PageHeader
-        back={{ href: '/students', label: 'Back to students' }}
+        back={{
+          href: current ? '/students' : '/students?show=outgoing',
+          label: 'Back to students',
+        }}
         title={`${student.fullName}${student.surname ? ` ${student.surname}` : ''}`}
-        description={`${student.admissionNo} · ${student.campus.name} (${student.institution.name})`}
+        description={`${student.admissionNo} · ${student.branch.name}`}
         actions={
           <>
-            <Badge variant={student.status === 'ACTIVE' ? 'success' : 'outline'}>
-              {STUDENT_STATUSES[student.status]}
+            <Badge variant={current ? 'success' : 'outline'}>
+              {current ? 'Current' : `Outgoing · ${STUDENT_STATUSES[student.status]}`}
             </Badge>
             {canAt(me, 'students.student.delete', place) && (
               <ActionForm
                 action={deleteStudent.bind(null, student.id)}
                 submitLabel="Delete"
                 pendingLabel="…"
-                confirmMessage={`Delete ${student.fullName}? Only for a student added by mistake; for a student who left, change the status instead.`}
-                submitVariant="ghost"
+                confirmMessage={`Delete ${student.fullName}? Only for a student added by mistake; for a student who left, use "Mark as left" instead.`}
+                submitVariant="destructive"
                 submitSize="sm"
               />
             )}
@@ -150,7 +141,156 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
         }
       />
 
+      {!current && (
+        <div className="mb-6 max-w-3xl rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p>
+            <span className="font-medium">Outgoing student</span> ·{' '}
+            {STUDENT_STATUSES[student.status]}
+            {leaving ? ` on ${date(leaving.effectiveOn)}` : ''}
+            {leaving?.destination ? ` · went to ${leaving.destination}` : ''}
+            {leaving?.reason ? ` · ${leaving.reason}` : ''}
+          </p>
+          <p className="mt-1 text-xs">
+            All records are kept. They are not on registers or in promotion any more.
+          </p>
+          {canEdit && (
+            <ActionForm
+              action={readmitStudent.bind(null, student.id)}
+              submitLabel="Re-admit"
+              confirmMessage={`Re-admit ${student.fullName} as a current student?`}
+              className="mt-3 flex-row flex-wrap items-end gap-2"
+            >
+              <Field label="From" htmlFor="readmitOn">
+                <Input
+                  id="readmitOn"
+                  name="effectiveOn"
+                  type="date"
+                  required
+                  defaultValue={today()}
+                />
+              </Field>
+              <Field label="Reason" htmlFor="readmitReason">
+                <Input id="readmitReason" name="reason" placeholder="e.g. Came back" />
+              </Field>
+            </ActionForm>
+          )}
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* --- Current placement -------------------------------------------------------------- */}
+        {current && (
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Current section</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              {placement ? (
+                <div className="flex flex-wrap items-end gap-4 text-sm">
+                  <div>
+                    <p className="font-medium">{placement.section}</p>
+                    <p className="text-muted-foreground">
+                      {placement.branch.name} · {placement.academicYear.name} · since{' '}
+                      {date(placement.enrolledOn)}
+                    </p>
+                  </div>
+                  {canEdit && (
+                    <ActionForm
+                      action={updateEnrolment.bind(null, student.id, placement.id)}
+                      submitLabel="Save roll no"
+                      submitVariant="outline"
+                      submitSize="sm"
+                      className="flex-row items-end gap-2"
+                    >
+                      <Input
+                        name="rollNo"
+                        defaultValue={placement.rollNo ?? ''}
+                        placeholder="Roll no"
+                        className="w-24"
+                        aria-label="Roll no"
+                      />
+                    </ActionForm>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Not placed in a section yet.</p>
+              )}
+
+              {picker && placement && canMove && (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <details className="rounded-md border p-3 text-sm">
+                    <summary className="cursor-pointer font-medium text-primary">
+                      Change section
+                    </summary>
+                    <ActionForm
+                      action={changeSection.bind(null, student.id)}
+                      submitLabel="Change section"
+                      confirmMessage="Change the section from the chosen day? The old section stays in the history."
+                      className="mt-3"
+                    >
+                      <SectionPicker
+                        {...picker}
+                        sections={ownSections}
+                        name="classId"
+                        required
+                        defaultSectionId={placement.classId}
+                      />
+                      <ChangeFields />
+                    </ActionForm>
+                  </details>
+                  {otherBranches.length > 0 && (
+                    <details className="rounded-md border p-3 text-sm">
+                      <summary className="cursor-pointer font-medium text-primary">
+                        Change branch
+                      </summary>
+                      <ActionForm
+                        action={changeBranch.bind(null, student.id)}
+                        submitLabel="Change branch"
+                        confirmMessage="Move this student to the chosen branch from that day? The old branch keeps the history."
+                        className="mt-3"
+                      >
+                        <SectionPicker
+                          {...picker}
+                          branches={otherBranches}
+                          name="classId"
+                          required
+                        />
+                        <ChangeFields />
+                      </ActionForm>
+                    </details>
+                  )}
+                </div>
+              )}
+
+              {picker && !placement && canEdit && openYears.length > 0 && (
+                <ActionForm action={enrol.bind(null, student.id)} submitLabel="Place in section">
+                  <SectionPicker {...picker} sections={ownSections} name="classId" required />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Academic year" htmlFor="academicYearId">
+                      <Select
+                        id="academicYearId"
+                        name="academicYearId"
+                        required
+                        defaultValue={openYears.find((y) => y.status === 'ACTIVE')?.id}
+                      >
+                        {openYears.map((y) => (
+                          <option key={y.id} value={y.id}>
+                            {y.name}
+                            {y.status === 'ACTIVE' ? ' · current' : ''}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                    <Field label="Roll no" htmlFor="enrolRollNo">
+                      <Input id="enrolRollNo" name="rollNo" />
+                    </Field>
+                  </div>
+                </ActionForm>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* --- Profile --------------------------------------------------------------------- */}
         <Card>
           <CardHeader>
@@ -201,18 +341,27 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
                       defaultValue={student.bloodGroup ?? ''}
                     />
                   </Field>
-                  {academic && (
-                    <Field label="Batch" htmlFor="batchId">
-                      <Select id="batchId" name="batchId" defaultValue={student.batchId ?? ''}>
-                        <option value="">—</option>
-                        {batches.map((b) => (
-                          <option key={b.id} value={b.id}>
-                            {b.name} · {b.stage}
-                          </option>
-                        ))}
-                      </Select>
-                    </Field>
-                  )}
+                  <Field
+                    label="Admission no"
+                    htmlFor="admissionNo"
+                    hint="Only to correct a mistake"
+                  >
+                    <Input id="admissionNo" name="admissionNo" defaultValue={student.admissionNo} />
+                  </Field>
+                  <Field label="Previous school / college" htmlFor="previousInstitution">
+                    <Input
+                      id="previousInstitution"
+                      name="previousInstitution"
+                      defaultValue={student.previousInstitution ?? ''}
+                    />
+                  </Field>
+                  <Field label="Previous marks" htmlFor="previousMarks">
+                    <Input
+                      id="previousMarks"
+                      name="previousMarks"
+                      defaultValue={student.previousMarks ?? ''}
+                    />
+                  </Field>
                   <div className="sm:col-span-2">
                     <Field label="Address" htmlFor="address">
                       <Input id="address" name="address" defaultValue={student.address ?? ''} />
@@ -223,17 +372,17 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
             ) : (
               <dl className="grid grid-cols-2 gap-y-2 text-sm">
                 <dt className="text-muted-foreground">Date of birth</dt>
-                <dd>{new Date(student.dateOfBirth).toLocaleDateString()}</dd>
+                <dd>{date(student.dateOfBirth)}</dd>
                 <dt className="text-muted-foreground">Gender</dt>
                 <dd>{GENDERS[student.gender]}</dd>
                 <dt className="text-muted-foreground">Phone</dt>
                 <dd>{student.phone ?? '—'}</dd>
-                <dt className="text-muted-foreground">Batch</dt>
-                <dd>{student.batch ? `${student.batch.name} · ${student.batch.stage}` : '—'}</dd>
+                <dt className="text-muted-foreground">Previous school / college</dt>
+                <dd>{student.previousInstitution ?? '—'}</dd>
               </dl>
             )}
             <p className="mt-4 text-xs text-muted-foreground">
-              Admitted on {new Date(student.admissionDate).toLocaleDateString()}
+              Admitted on {date(student.admissionDate)}
             </p>
           </CardContent>
         </Card>
@@ -270,7 +419,7 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
                     submitLabel="Remove"
                     pendingLabel="…"
                     confirmMessage={`Remove ${g.guardian.fullName} from this student?`}
-                    submitVariant="ghost"
+                    submitVariant="destructive"
                     submitSize="sm"
                   />
                 )}
@@ -314,110 +463,65 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
             )}
           </CardContent>
         </Card>
-      </div>
 
-      {/* --- Sections per academic year ------------------------------------------------------ */}
-      <h2 className="mb-3 mt-8 text-lg font-semibold">Sections</h2>
-      <Table>
-        <TableHead>
-          <tr>
-            <Th>Academic year</Th>
-            <Th>Section</Th>
-            <Th>Roll no</Th>
-            <Th>Status</Th>
-            <Th />
-          </tr>
-        </TableHead>
-        <tbody>
-          {student.enrolments.map((e) => (
-            <tr key={e.id}>
-              <Td>{e.academicYear.name}</Td>
-              <Td>{sectionLabel(e.class)}</Td>
-              <Td>{e.rollNo ?? '—'}</Td>
-              <Td>
-                <Badge variant={e.status === 'ACTIVE' ? 'success' : 'outline'}>{e.status}</Badge>
-              </Td>
-              <Td className="text-right">
-                {e.status === 'ACTIVE' && (canEdit || canMove) && (
-                  <ActionForm
-                    action={updateEnrolment.bind(null, student.id, e.id)}
-                    submitLabel="Save"
-                    submitVariant="outline"
-                    submitSize="sm"
-                    className="flex-row items-center justify-end gap-2"
-                  >
-                    {canMove && (
-                      <Select
-                        name="sectionId"
-                        defaultValue={e.class.id}
-                        className="w-56"
-                        aria-label="Section"
-                      >
-                        {sections.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.label}
-                          </option>
-                        ))}
-                      </Select>
-                    )}
-                    {canEdit && (
-                      <Input
-                        name="rollNo"
-                        defaultValue={e.rollNo ?? ''}
-                        placeholder="Roll no"
-                        className="w-24"
-                        aria-label="Roll no"
-                      />
-                    )}
-                  </ActionForm>
-                )}
-              </Td>
-            </tr>
-          ))}
-          {student.enrolments.length === 0 && (
-            <tr>
-              <Td colSpan={5} className="py-6 text-center text-muted-foreground">
-                Not placed in a section yet.
-              </Td>
-            </tr>
-          )}
-        </tbody>
-      </Table>
-      {canEdit && student.status === 'ACTIVE' && yearsWithout.length > 0 && sections.length > 0 && (
-        <Card className="mt-4 max-w-xl">
+        {/* --- Timeline ------------------------------------------------------------------------ */}
+        <Card>
           <CardHeader>
-            <CardTitle>Place in a section</CardTitle>
+            <CardTitle>Timeline</CardTitle>
           </CardHeader>
           <CardContent>
-            <ActionForm action={enrol.bind(null, student.id)} submitLabel="Place">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Field label="Academic year" htmlFor="academicYearId">
-                  <Select id="academicYearId" name="academicYearId" required>
-                    {yearsWithout.map((y) => (
-                      <option key={y.id} value={y.id}>
-                        {y.name}
-                        {y.status === 'ACTIVE' ? ' · current' : ''}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-                <Field label="Section" htmlFor="sectionId">
-                  <Select id="sectionId" name="sectionId" required>
-                    {sections.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-                <Field label="Roll no" htmlFor="enrolRollNo">
-                  <Input id="enrolRollNo" name="rollNo" />
-                </Field>
-              </div>
-            </ActionForm>
+            <Timeline student={student} />
           </CardContent>
         </Card>
-      )}
+
+        {/* --- Leaving ------------------------------------------------------------------------- */}
+        {current && canEdit && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Mark as left</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ActionForm
+                action={leaveStudent.bind(null, student.id)}
+                submitLabel="Mark as left"
+                submitVariant="destructive"
+                confirmMessage={`Mark ${student.fullName} as left? They become outgoing: off registers and promotion, records kept, portal login closed.`}
+              >
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Why" htmlFor="status">
+                    <Select id="status" name="status">
+                      {Object.entries(LEAVING_STATUSES).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="Left on" htmlFor="leftOn">
+                    <Input
+                      id="leftOn"
+                      name="effectiveOn"
+                      type="date"
+                      required
+                      defaultValue={today()}
+                    />
+                  </Field>
+                  <Field label="Went to (if known)" htmlFor="destination">
+                    <Input
+                      id="destination"
+                      name="destination"
+                      placeholder="e.g. Narayana JC, Vizag"
+                    />
+                  </Field>
+                  <Field label="Reason" htmlFor="leaveReason">
+                    <Input id="leaveReason" name="reason" placeholder="e.g. Family moved" />
+                  </Field>
+                </div>
+              </ActionForm>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {documents && (
         <DocumentsCard
@@ -468,113 +572,82 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
       )}
 
       {/* --- Portal logins --------------------------------------------------------------------- */}
-      {canEdit && me.enabledModules.includes('portal') && <PortalAccess student={student} />}
-
-      {/* --- Move to another campus ------------------------------------------------------------ */}
-      {targetCampuses.length > 0 && (
-        <Card className="mt-6 max-w-xl">
-          <CardHeader>
-            <CardTitle>Move to another campus</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ActionForm
-              action={transferCampus.bind(null, student.id)}
-              submitLabel="Move"
-              confirmMessage={`Move ${student.fullName} to the chosen campus?`}
-            >
-              <Field
-                label="To"
-                htmlFor="to"
-                hint={
-                  hasCurrentSection ? 'Their current section moves to the chosen one' : undefined
-                }
-              >
-                <Select id="to" name="to" required>
-                  {targetCampuses.map((c) =>
-                    hasCurrentSection ? (
-                      <optgroup key={c.id} label={c.name}>
-                        {otherSections
-                          .filter((s) => s.campusId === c.id)
-                          .map((s) => (
-                            <option key={s.id} value={`${c.id}:${s.id}`}>
-                              {s.label}
-                            </option>
-                          ))}
-                      </optgroup>
-                    ) : (
-                      <option key={c.id} value={`${c.id}:`}>
-                        {c.name}
-                      </option>
-                    ),
-                  )}
-                </Select>
-              </Field>
-              <Field label="Reason" htmlFor="transferReason">
-                <Input id="transferReason" name="reason" placeholder="e.g. Closer to home" />
-              </Field>
-            </ActionForm>
-          </CardContent>
-        </Card>
+      {canEdit && current && me.enabledModules.includes('portal') && (
+        <PortalAccess student={student} />
       )}
-
-      {/* --- Status ---------------------------------------------------------------------------- */}
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Status history</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="flex flex-col gap-2 text-sm">
-              {student.statusChanges.map((c) => (
-                <li key={c.id}>
-                  <span className="font-medium">{STUDENT_STATUSES[c.toStatus]}</span>
-                  <span className="text-muted-foreground">
-                    {' '}
-                    from {new Date(c.effectiveOn).toLocaleDateString()}
-                    {c.reason ? ` · ${c.reason}` : ''}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-        {canEdit && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Change status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ActionForm
-                action={changeStatus.bind(null, student.id)}
-                submitLabel="Change status"
-                confirmMessage="Change this student's status? Leaving also ends their current section."
-                resetOnSuccess
-              >
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="New status" htmlFor="status">
-                    <Select id="status" name="status">
-                      {Object.entries(STUDENT_STATUSES)
-                        .filter(([value]) => value !== student.status)
-                        .map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                    </Select>
-                  </Field>
-                  <Field label="From" htmlFor="effectiveOn">
-                    <Input id="effectiveOn" name="effectiveOn" type="date" required />
-                  </Field>
-                </div>
-                <Field label="Reason" htmlFor="reason">
-                  <Input id="reason" name="reason" placeholder="e.g. Moved to another city" />
-                </Field>
-              </ActionForm>
-            </CardContent>
-          </Card>
-        )}
-      </div>
     </>
+  );
+}
+
+/** The date, reason and roll number of a section / branch change. */
+function ChangeFields() {
+  return (
+    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+      <Field label="From" htmlFor="changeOn" hint="First day in the new section">
+        <Input id="changeOn" name="effectiveOn" type="date" required defaultValue={today()} />
+      </Field>
+      <Field label="Reason" htmlFor="changeReason">
+        <Input id="changeReason" name="reason" placeholder="e.g. Cleared the entrance test" />
+      </Field>
+      <Field label="Roll no" htmlFor="changeRollNo">
+        <Input id="changeRollNo" name="rollNo" />
+      </Field>
+    </div>
+  );
+}
+
+/** Placements and status changes in one list, newest first. */
+function Timeline({ student }: { student: StudentProfile }) {
+  const entries = [
+    ...student.enrolments.map((e) => ({
+      key: e.id,
+      on: e.enrolledOn,
+      title: e.section,
+      detail: [
+        e.branch.name,
+        e.academicYear.name,
+        e.rollNo ? `roll ${e.rollNo}` : null,
+        e.endedOn ? `until ${date(e.endedOn)}` : null,
+        e.reason,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      badge: ENROLMENT_STATUSES[e.status],
+      current: e.status === 'ACTIVE',
+    })),
+    ...student.statusChanges.map((c) => ({
+      key: c.id,
+      on: c.effectiveOn,
+      title: c.fromStatus === null ? 'Admitted' : STUDENT_STATUSES[c.toStatus],
+      detail: [c.reason, c.destination ? `went to ${c.destination}` : null]
+        .filter(Boolean)
+        .join(' · '),
+      badge: null,
+      current: false,
+    })),
+  ].sort((a, b) => b.on.localeCompare(a.on));
+  return (
+    <ol className="flex flex-col gap-3 border-l pl-4 text-sm">
+      {entries.map((e) => (
+        <li key={e.key} className="relative">
+          <span
+            className={`absolute -left-[21px] top-1.5 size-2.5 rounded-full ${
+              e.current ? 'bg-success' : 'bg-muted-foreground/40'
+            }`}
+          />
+          <p>
+            <span className="text-muted-foreground">{date(e.on)}</span>{' '}
+            <span className="font-medium">{e.title}</span>
+            {e.badge && (
+              <Badge variant={e.current ? 'success' : 'outline'} className="ml-2">
+                {e.badge}
+              </Badge>
+            )}
+          </p>
+          {e.detail && <p className="text-xs text-muted-foreground">{e.detail}</p>}
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -612,12 +685,13 @@ function PortalAccess({ student }: { student: StudentProfile }) {
           <div key={login.id} className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{who}</span>
             <span className="text-muted-foreground">{login.email}</span>
+            {login.status !== 'ACTIVE' && <Badge variant="outline">Closed</Badge>}
             <ActionForm
               action={revokePortalAccess.bind(null, student.id, login.id)}
               submitLabel="Remove"
               pendingLabel="…"
               confirmMessage={`Remove the login ${login.email}? They will no longer be able to log in.`}
-              submitVariant="ghost"
+              submitVariant="destructive"
               submitSize="sm"
             />
           </div>

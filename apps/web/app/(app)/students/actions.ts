@@ -1,8 +1,9 @@
 'use server';
 /**
- * Server actions for the Students screens: admission, profile, status, guardians, sections.
- * Each calls the API and returns a message for the form; the API checks every permission at
- * the student's campus again.
+ * Server actions for the Students screens (ADR-0030): admission, profile, leaving and
+ * re-admission, section and branch changes, guardians, placements, promotion, import, admission
+ * numbers, portal logins and documents. Each calls the API and returns a message for the form;
+ * the API checks every permission at the student's branch again.
  */
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -29,7 +30,7 @@ async function forStudent(id: string, call: () => Promise<unknown>, success: str
 }
 
 export async function admitStudent(_previous: FormState, form: FormData): Promise<FormState> {
-  const sectionId = text(form, 'sectionId');
+  const sectionId = text(form, 'classId');
   const academicYearId = text(form, 'academicYearId');
   const guardianName = text(form, 'guardianName');
   let student: StudentProfile;
@@ -37,7 +38,7 @@ export async function admitStudent(_previous: FormState, form: FormData): Promis
     student = await api<StudentProfile>('/students', {
       method: 'POST',
       body: {
-        campusId: text(form, 'campusId'),
+        branchId: text(form, 'branchId'),
         admissionNo: text(form, 'admissionNo'),
         admissionDate: text(form, 'admissionDate'),
         fullName: text(form, 'fullName'),
@@ -47,7 +48,8 @@ export async function admitStudent(_previous: FormState, form: FormData): Promis
         phone: text(form, 'phone'),
         email: text(form, 'email'),
         address: text(form, 'address'),
-        batchId: text(form, 'batchId'),
+        previousInstitution: text(form, 'previousInstitution'),
+        previousMarks: text(form, 'previousMarks'),
         enrolment:
           sectionId && academicYearId
             ? { academicYearId, classId: sectionId, rollNo: text(form, 'rollNo') }
@@ -85,26 +87,79 @@ export async function updateStudent(id: string, _previous: FormState, form: Form
           phone: text(form, 'phone'),
           email: text(form, 'email'),
           address: text(form, 'address'),
-          batchId: text(form, 'batchId'),
+          previousInstitution: text(form, 'previousInstitution'),
+          previousMarks: text(form, 'previousMarks'),
+          admissionNo: text(form, 'admissionNo'),
         },
       }),
     'Saved',
   );
 }
 
-export async function changeStatus(id: string, _previous: FormState, form: FormData) {
+/** The student leaves: becomes outgoing (transferred, discontinued or completed). */
+export async function leaveStudent(id: string, _previous: FormState, form: FormData) {
   return forStudent(
     id,
     () =>
-      api(`/students/${id}/status`, {
+      api(`/students/${id}/leave`, {
         method: 'POST',
         body: {
           status: text(form, 'status'),
           effectiveOn: text(form, 'effectiveOn'),
           reason: text(form, 'reason'),
+          destination: text(form, 'destination'),
         },
       }),
-    'Status changed',
+    'The student is now outgoing. Their records are kept.',
+  );
+}
+
+export async function readmitStudent(id: string, _previous: FormState, form: FormData) {
+  return forStudent(
+    id,
+    () =>
+      api(`/students/${id}/readmit`, {
+        method: 'POST',
+        body: { effectiveOn: text(form, 'effectiveOn'), reason: text(form, 'reason') },
+      }),
+    'Re-admitted. Now place them in a section.',
+  );
+}
+
+/** Another section of the same branch, from a date (the section picker sends "classId"). */
+export async function changeSection(id: string, _previous: FormState, form: FormData) {
+  return forStudent(
+    id,
+    () =>
+      api(`/students/${id}/change-section`, {
+        method: 'POST',
+        body: {
+          classId: text(form, 'classId'),
+          effectiveOn: text(form, 'effectiveOn'),
+          reason: text(form, 'reason'),
+          rollNo: text(form, 'rollNo'),
+        },
+      }),
+    'Section changed; the old one stays in the history',
+  );
+}
+
+/** Another branch and a section there, from a date. */
+export async function changeBranch(id: string, _previous: FormState, form: FormData) {
+  return forStudent(
+    id,
+    () =>
+      api(`/students/${id}/change-branch`, {
+        method: 'POST',
+        body: {
+          branchId: text(form, 'branchId'),
+          classId: text(form, 'classId'),
+          effectiveOn: text(form, 'effectiveOn'),
+          reason: text(form, 'reason'),
+          rollNo: text(form, 'rollNo'),
+        },
+      }),
+    'Branch changed; the old branch keeps the history',
   );
 }
 
@@ -155,11 +210,11 @@ export async function enrol(id: string, _previous: FormState, form: FormData) {
         method: 'POST',
         body: {
           academicYearId: text(form, 'academicYearId'),
-          classId: text(form, 'sectionId'),
+          classId: text(form, 'classId'),
           rollNo: text(form, 'rollNo'),
         },
       }),
-    'Placed in section',
+    'Placed in the section',
   );
 }
 
@@ -174,9 +229,9 @@ export async function updateEnrolment(
     () =>
       api(`/students/${id}/enrolments/${enrolmentId}`, {
         method: 'PATCH',
-        body: { classId: text(form, 'sectionId'), rollNo: text(form, 'rollNo') },
+        body: { rollNo: text(form, 'rollNo') ?? null },
       }),
-    'Saved',
+    'Roll number saved',
   );
 }
 
@@ -190,11 +245,11 @@ export async function deleteStudent(id: string): Promise<FormState> {
   redirect('/students');
 }
 
-// --- Promotion and shuffle -----------------------------------------------------------------------
+// --- Promotion -----------------------------------------------------------------------------------
 
 /**
  * Applies a promotion. Each section row has a drop-down named "to_<fromSectionId>" whose value is
- * "section:<id>", "graduate" or "skip".
+ * "section:<id>", "complete" or "skip".
  */
 export async function applyPromotion(_previous: FormState, form: FormData): Promise<FormState> {
   const mapping = [...form.keys()]
@@ -203,19 +258,18 @@ export async function applyPromotion(_previous: FormState, form: FormData): Prom
       const fromSectionId = key.slice(3);
       const [kind, id] = String(form.get(key)).split(':');
       if (kind === 'section') return { fromSectionId, toSectionId: id };
-      if (kind === 'graduate') return { fromSectionId, graduate: true };
+      if (kind === 'complete') return { fromSectionId, complete: true };
       return { fromSectionId };
     });
-  let result: { promoted: number; graduated: number; batchesMoved: number };
+  let result: { promoted: number; completed: number };
   try {
     result = await api('/promotions', {
       method: 'POST',
       body: {
-        campusId: text(form, 'campusId'),
+        branchId: text(form, 'branchId'),
         fromYearId: text(form, 'fromYearId'),
         toYearId: text(form, 'toYearId'),
         mapping,
-        batchStage: text(form, 'batchStage'),
         keepRollNumbers: form.get('keepRollNumbers') === 'on',
       },
     });
@@ -224,48 +278,16 @@ export async function applyPromotion(_previous: FormState, form: FormData): Prom
   }
   revalidatePath('/students/promote');
   return {
-    success: `Promoted ${result.promoted}, finished ${result.graduated}${
-      result.batchesMoved ? `, ${result.batchesMoved} batch(es) moved to the new stage` : ''
-    }.`,
+    success: `Promoted ${result.promoted}; ${result.completed} completed (now outgoing).`,
   };
 }
 
-/** Shuffle: the ticked students (name="studentIds") to the chosen section. */
-export async function moveStudents(_previous: FormState, form: FormData): Promise<FormState> {
-  let result: { moved: number };
-  try {
-    result = await api('/enrolments/move', {
-      method: 'POST',
-      body: {
-        academicYearId: text(form, 'academicYearId'),
-        studentIds: form.getAll('studentIds'),
-        toSectionId: text(form, 'toSectionId'),
-      },
-    });
-  } catch (error) {
-    return { error: errorMessage(error) };
-  }
-  revalidatePath('/students/move');
-  return { success: `Moved ${result.moved} student(s). Roll numbers were cleared; set new ones.` };
-}
+// --- Import and admission numbers ---------------------------------------------------------------
 
-// --- Campus transfer, import, numbering ----------------------------------------------------------
-
-/** The "To" drop-down value is "<campusId>:<sectionId>" (or "<campusId>:" without a section). */
-export async function transferCampus(id: string, _previous: FormState, form: FormData) {
-  const [toCampusId, toSectionId] = String(form.get('to') ?? '').split(':');
-  return forStudent(
-    id,
-    () =>
-      api(`/students/${id}/transfer`, {
-        method: 'POST',
-        body: { toCampusId, toSectionId: toSectionId || undefined, reason: text(form, 'reason') },
-      }),
-    'Moved to the new campus',
-  );
-}
-
-/** The columns of an import file (also the template's header). */
+/**
+ * The columns of an import file (also the template's header). Where the students go (branch,
+ * year, section) is chosen on the screen, not in the file (ADR-0030).
+ */
 const IMPORT_COLUMNS = [
   'admissionNo',
   'admissionDate',
@@ -276,8 +298,8 @@ const IMPORT_COLUMNS = [
   'phone',
   'email',
   'address',
-  'batch',
-  'section',
+  'previousInstitution',
+  'previousMarks',
   'rollNo',
   'guardianName',
   'guardianRelation',
@@ -286,6 +308,7 @@ const IMPORT_COLUMNS = [
 
 export async function importStudents(_previous: FormState, form: FormData): Promise<FormState> {
   const file = form.get('file');
+  if (!text(form, 'classId')) return { error: 'Choose the section the students go into' };
   if (!(file instanceof File) || file.size === 0) return { error: 'Choose a CSV file' };
   if (file.size > 5_000_000) return { error: 'The file is too big (5 MB at most)' };
   const rows = parseCsv(await file.text(), IMPORT_COLUMNS);
@@ -303,8 +326,8 @@ export async function importStudents(_previous: FormState, form: FormData): Prom
     result = await api('/students/import', {
       method: 'POST',
       body: {
-        campusId: text(form, 'campusId'),
         academicYearId: text(form, 'academicYearId'),
+        sectionId: text(form, 'classId'),
         dryRun,
         rows,
       },
@@ -329,25 +352,23 @@ export async function importStudents(_previous: FormState, form: FormData): Prom
   return { success: `Imported ${result.imported} student(s).` };
 }
 
-export async function setNumbering(
-  institutionId: string,
-  _previous: FormState,
-  form: FormData,
-): Promise<FormState> {
-  let result: { pattern: string | null; example: string | null };
+/** AUTOMATIC (with a pattern) or MANUAL admission numbers for the whole organization. */
+export async function setNumbering(_previous: FormState, form: FormData): Promise<FormState> {
+  let result: { mode: string; example: string | null };
   try {
-    result = await api(`/institutions/${institutionId}/admission-numbering`, {
+    result = await api('/organization/admission-numbering', {
       method: 'PUT',
-      body: { pattern: text(form, 'pattern') ?? null },
+      body: { mode: text(form, 'mode'), pattern: text(form, 'pattern') ?? null },
     });
   } catch (error) {
     return { error: errorMessage(error) };
   }
   revalidatePath('/students/settings');
   return {
-    success: result.example
-      ? `Saved. The first number will look like ${result.example}.`
-      : 'Saved: admission numbers are typed by hand.',
+    success:
+      result.mode === 'AUTOMATIC'
+        ? `Saved. Numbers will look like ${result.example}.`
+        : 'Saved: admission numbers are typed in the form and the import sheet.',
   };
 }
 
@@ -433,16 +454,11 @@ export async function deleteDocument(id: string, documentId: string) {
 
 // --- Document types (Student settings) -----------------------------------------------------------
 
-export async function createDocumentType(
-  institutionId: string,
-  _previous: FormState,
-  form: FormData,
-): Promise<FormState> {
+export async function createDocumentType(_previous: FormState, form: FormData): Promise<FormState> {
   try {
     await api('/document-types', {
       method: 'POST',
       body: {
-        institutionId,
         name: text(form, 'name'),
         isRequired: form.get('isRequired') === 'on',
         visibleInPortal: form.get('visibleInPortal') === 'on',

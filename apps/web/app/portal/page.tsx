@@ -1,5 +1,5 @@
 /**
- * /portal: a parent's children (or a student's own card): school, campus, section, batch, and
+ * /portal: a parent's children (or a student's own card): school, branch, section, and
  * this month's attendance when the school uses the Attendance module.
  */
 import {
@@ -16,7 +16,6 @@ import Link from 'next/link';
 import { api } from '../../lib/api';
 import { getMe } from '../../lib/me';
 import type { PortalAttendance, PortalMe } from '../../lib/types';
-import { sectionLabel } from '../(app)/students/labels';
 
 export default async function PortalHomePage() {
   // Portal switched off: the layout explains it; don't call the API (it would answer 403).
@@ -49,7 +48,6 @@ export default async function PortalHomePage() {
       )}
       <div className="grid gap-6 md:grid-cols-2">
         {me.students.map((s, i) => {
-          const current = s.enrolments[0];
           const month = attendance[i];
           return (
             <Card key={s.id}>
@@ -63,11 +61,11 @@ export default async function PortalHomePage() {
               </CardHeader>
               <CardContent className="flex flex-col gap-2 text-sm">
                 <p className="text-muted-foreground">
-                  {s.admissionNo} · {s.institution.name}, {s.campus.name}
+                  {s.admissionNo} · {s.organization.name}, {s.branch.name}
                 </p>
                 <p>
-                  {current
-                    ? `${sectionLabel(current.class)} · ${current.academicYear.name}${current.rollNo ? ` · Roll ${current.rollNo}` : ''}`
+                  {s.placement
+                    ? `${s.placement.section} · ${s.placement.academicYear}${s.placement.rollNo ? ` · Roll ${s.placement.rollNo}` : ''}`
                     : 'Not placed in a section yet'}
                 </p>
                 {month && (

@@ -45,7 +45,7 @@ export default async function DashboardPage() {
     { label: 'Organizations', value: data.organizations.total },
     { label: 'Active', value: data.organizations.active },
     { label: 'Suspended', value: data.organizations.suspended },
-    { label: 'Institutions', value: data.institutions },
+    { label: 'Branches', value: data.branches },
     { label: 'Users', value: data.users },
   ];
 

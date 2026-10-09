@@ -1,8 +1,9 @@
 /**
- * /students/new: admit a student. Only the campus, admission number and date, name, date of
- * birth and gender are required; batch, section (for an academic year) and the first guardian
- * can be given now or later on the student's page.
- * Only campuses where you may admit students are offered; the API checks everything again.
+ * /students/new: admit a student (ADR-0030). Required: branch, admission date, name, date of
+ * birth and gender; the admission number too when the organization types them (MANUAL).
+ * The section is chosen step by step (branch → year → group → stream → section) and is optional;
+ * a student can join straight into a later year (lateral entry: previous school and marks).
+ * Only branches where you may admit students are offered; the API checks everything again.
  */
 import {
   ActionForm,
@@ -17,47 +18,44 @@ import {
   Select,
 } from '@eduplatform/ui';
 import { UserPlus } from 'lucide-react';
+import { SectionPicker } from '../../../../components/section-picker';
 import { api } from '../../../../lib/api';
-import { can, canAt, getMe } from '../../../../lib/me';
-import { sectionOptions } from '../../../../lib/sections';
-import type { AcademicYear, Batch, Institution } from '../../../../lib/types';
+import { can, getMe } from '../../../../lib/me';
+import { branchesForWork } from '../../../../lib/places';
+import { pickerData } from '../../../../lib/structure';
+import type { AcademicYear, Branch, OwnOrganization } from '../../../../lib/types';
 import { admitStudent } from '../actions';
 import { GENDERS, RELATIONS } from '../labels';
-import { campusesInUse } from '../../../../lib/places';
 
 export default async function AdmitStudentPage() {
   const me = await getMe();
-  const institutions = can(me, 'platform.institution.view')
-    ? await api<Institution[]>('/institutions')
-    : [];
-  const campuses = institutions.flatMap((i) =>
-    campusesInUse(i)
-      .filter((c) => canAt(me, 'students.student.create', { institutionId: i.id, campusId: c.id }))
-      .map((c) => ({ ...c, institution: i })),
-  );
-  if (campuses.length === 0) {
+  const [allBranches, organization] = await Promise.all([
+    can(me, 'platform.branch.view') ? api<Branch[]>('/branches') : [],
+    api<OwnOrganization>('/organization'),
+  ]);
+  const branches = branchesForWork(me, allBranches, 'students.student.create');
+  if (branches.length === 0) {
     return (
       <>
         <PageHeader back={{ href: '/students', label: 'Back to students' }} title="Admit student" />
         <EmptyState
           icon={<UserPlus />}
-          title="No campus to admit to"
-          description="Your roles don't allow admitting students at any campus."
+          title="No branch to admit to"
+          description="Your roles do not allow admitting students at any branch."
         />
       </>
     );
   }
 
-  const academic = me.enabledModules.includes('academic');
-  const [years, batches, sections] = academic
+  const academic = me.enabledModules.includes('academic') && can(me, 'academic.structure.view');
+  const [years, picker] = academic
     ? await Promise.all([
         can(me, 'academic.year.view') ? api<AcademicYear[]>('/academic-years') : [],
-        can(me, 'academic.batch.view') ? api<Batch[]>('/batches') : [],
-        can(me, 'academic.structure.view') ? sectionOptions(campuses.map((c) => c.id)) : [],
+        pickerData(branches.map((b) => b.id)),
       ])
-    : [[], [], []];
+    : [[], null];
   const openYears = years.filter((y) => y.status !== 'CLOSED');
-  const campusName = new Map(campuses.map((c) => [c.id, c.name]));
+  const manual = organization.admissionNumbering === 'MANUAL';
 
   return (
     <>
@@ -76,26 +74,75 @@ export default async function AdmitStudentPage() {
           <CardHeader>
             <CardTitle>Admission</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-3">
-            <Field label="Campus *" htmlFor="campusId">
-              <Select id="campusId" name="campusId" required>
-                {campuses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.institution.name})
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field
-              label="Admission no"
-              htmlFor="admissionNo"
-              hint="Leave empty to use the next number (if your institution has automatic numbering)"
-            >
-              <Input id="admissionNo" name="admissionNo" placeholder="SVJC260001" />
-            </Field>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            {manual ? (
+              <Field label="Admission no *" htmlFor="admissionNo">
+                <Input id="admissionNo" name="admissionNo" required placeholder="SVJC260001" />
+              </Field>
+            ) : (
+              <Field label="Admission no" htmlFor="admissionNo-auto">
+                <Input
+                  id="admissionNo-auto"
+                  disabled
+                  value={`Automatic (${organization.admissionNoPattern})`}
+                />
+              </Field>
+            )}
             <Field label="Admission date *" htmlFor="admissionDate">
               <Input id="admissionDate" name="admissionDate" type="date" required />
             </Field>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Branch and section</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {picker ? (
+              <>
+                <SectionPicker
+                  {...picker}
+                  branches={branches}
+                  name="classId"
+                  emptyLabel="Not placed yet"
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field
+                    label="Academic year"
+                    htmlFor="academicYearId"
+                    hint="Needed when a section is chosen"
+                  >
+                    <Select
+                      id="academicYearId"
+                      name="academicYearId"
+                      defaultValue={openYears.find((y) => y.status === 'ACTIVE')?.id ?? ''}
+                    >
+                      <option value="">—</option>
+                      {openYears.map((y) => (
+                        <option key={y.id} value={y.id}>
+                          {y.name}
+                          {y.status === 'ACTIVE' ? ' · current' : ''}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="Roll no" htmlFor="rollNo">
+                    <Input id="rollNo" name="rollNo" />
+                  </Field>
+                </div>
+              </>
+            ) : (
+              <Field label="Branch *" htmlFor="branchId">
+                <Select id="branchId" name="branchId" required>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
           </CardContent>
         </Card>
 
@@ -136,50 +183,19 @@ export default async function AdmitStudentPage() {
           </CardContent>
         </Card>
 
-        {academic && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Batch and section (optional)</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <Field label="Batch" htmlFor="batchId">
-                <Select id="batchId" name="batchId">
-                  <option value="">—</option>
-                  {batches
-                    .filter((b) => b.status === 'ACTIVE')
-                    .map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name} · {b.stage} ({b.institution.name})
-                      </option>
-                    ))}
-                </Select>
-              </Field>
-              <Field label="Academic year" htmlFor="academicYearId">
-                <Select id="academicYearId" name="academicYearId">
-                  <option value="">—</option>
-                  {openYears.map((y) => (
-                    <option key={y.id} value={y.id}>
-                      {y.name} ({y.institution.name}){y.status === 'ACTIVE' ? ' · current' : ''}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Section" htmlFor="sectionId" hint="Must be on the chosen campus">
-                <Select id="sectionId" name="sectionId">
-                  <option value="">—</option>
-                  {sections.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {campusName.get(s.campusId)} · {s.label}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Roll no" htmlFor="rollNo">
-                <Input id="rollNo" name="rollNo" />
-              </Field>
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Joining in a later year (optional)</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <Field label="Previous school / college" htmlFor="previousInstitution">
+              <Input id="previousInstitution" name="previousInstitution" />
+            </Field>
+            <Field label="Previous marks" htmlFor="previousMarks" hint="e.g. 1st year: 845/1000">
+              <Input id="previousMarks" name="previousMarks" />
+            </Field>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

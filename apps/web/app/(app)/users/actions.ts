@@ -9,12 +9,10 @@ import { api, errorMessage } from '../../../lib/api';
 import { flash } from '../../../lib/flash';
 import type { FormState, User } from '../../../lib/types';
 
-/** The "Where" drop-down value -> what the API expects. "" = the whole organization. */
-function placeFromForm(form: FormData): { institutionId?: string; campusId?: string } {
-  const [kind, id] = String(form.get('place') ?? '').split(':');
-  if (kind === 'institution') return { institutionId: id };
-  if (kind === 'campus') return { campusId: id };
-  return {};
+/** The "Where" drop-down: a branch id, or "" for the whole organization. */
+function placeFromForm(form: FormData): { branchId?: string } {
+  const branchId = String(form.get('branchId') ?? '');
+  return branchId ? { branchId } : {};
 }
 
 export async function createUser(_previous: FormState, form: FormData): Promise<FormState> {

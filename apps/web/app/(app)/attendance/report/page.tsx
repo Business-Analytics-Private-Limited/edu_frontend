@@ -2,7 +2,7 @@
  * /attendance/report?classId=&from=&to= : a section's attendance over a date range: each
  * student's present / absent / late / half day / leave and percentage, and how many working days
  * were (not) marked. Percentage: present and late count fully, a half day half, leave doesn't
- * count against the student. Needs "attendance.report.view" at the campus.
+ * count against the student. Needs "attendance.report.view" at the section's branch.
  */
 import {
   Badge,
@@ -17,9 +17,9 @@ import {
   Th,
 } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
-import { can, canAt, getMe } from '../../../../lib/me';
-import { sectionOptions } from '../../../../lib/sections';
-import type { Institution, SectionReport } from '../../../../lib/types';
+import { branchesWith, can, getMe } from '../../../../lib/me';
+import { pickerData } from '../../../../lib/structure';
+import type { Branch, SectionReport } from '../../../../lib/types';
 import { STATUSES } from '../labels';
 
 export default async function AttendanceReportPage({
@@ -29,18 +29,15 @@ export default async function AttendanceReportPage({
 }) {
   const params = await searchParams;
   const me = await getMe();
-  const institutions = can(me, 'platform.institution.view')
-    ? await api<Institution[]>('/institutions')
-    : [];
-  const campuses = institutions.flatMap((i) =>
-    i.campuses
-      .filter((c) => canAt(me, 'attendance.report.view', { institutionId: i.id, campusId: c.id }))
-      .map((c) => ({ ...c, institution: i })),
+  const reach = branchesWith(me, 'attendance.report.view');
+  const branches = (can(me, 'platform.branch.view') ? await api<Branch[]>('/branches') : []).filter(
+    (b) => reach === 'all' || reach.includes(b.id),
   );
+  // Every section of those branches, as "KPHB · Junior › MPC › JEE Mains › JEE-A".
   const sections = can(me, 'academic.structure.view')
-    ? await sectionOptions(campuses.map((c) => c.id))
+    ? (await pickerData(branches.map((b) => b.id))).sections
     : [];
-  const campusName = new Map(campuses.map((c) => [c.id, c.name]));
+  const branchName = new Map(branches.map((b) => [b.id, b.name]));
 
   const today = new Date().toISOString().slice(0, 10);
   const from = params.from ?? `${today.slice(0, 8)}01`;
@@ -69,7 +66,7 @@ export default async function AttendanceReportPage({
           >
             {sections.map((s) => (
               <option key={s.id} value={s.id}>
-                {campusName.get(s.campusId)} · {s.label}
+                {branchName.get(s.branchId!)} · {s.path} › {s.name}
               </option>
             ))}
           </Select>

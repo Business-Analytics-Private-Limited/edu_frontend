@@ -24,76 +24,71 @@ export interface Me {
   grants: Grant[];
   /** A temporary password that must be changed first (ADR-0028): see /change-password. */
   mustChangePassword: boolean;
-  /** Has the Organization admin role for the whole organization (may activate campuses). */
+  /** Has the Organization admin role for the whole organization. */
   isOrganizationAdmin: boolean;
   enabledModules: string[];
 }
 
-/** One role of the user and where it applies (no ids = the whole organization). */
+/** One role of the user and where it applies (no branch = the whole organization). */
 export interface Grant {
   roleName: string;
   permissions: string[];
-  institutionId: string | null;
-  campusId: string | null;
+  branchId: string | null;
 }
 
-/** A place in the organization: {} = the whole organization. */
+/** A place in the organization (ADR-0030): {} = the whole organization, or one branch. */
 export interface Place {
-  institutionId?: string | null;
-  campusId?: string | null;
+  branchId?: string | null;
 }
 
 export interface Dashboard {
   /** Active ones; closed ones are counted separately (ADR-0026). */
-  institutions: number;
-  inactiveInstitutions: number;
-  campuses: number;
-  inactiveCampuses: number;
+  branches: number;
+  inactiveBranches: number;
   users: number;
   activeUsers: number;
   roles: number;
+  /** With the Students module: current students and those who left (outgoing). */
+  students: { current: number; outgoing: number } | null;
 }
+
+/** What kind of institution the organization is: decides its academic structure (ADR-0030). */
+export type OrganizationType = 'SCHOOL' | 'INTERMEDIATE' | 'DEGREE' | 'ENGINEERING';
+export type AdmissionNumbering = 'AUTOMATIC' | 'MANUAL';
 
 export interface OwnOrganization {
   id: string;
   name: string;
   slug: string;
+  code: string;
+  type: OrganizationType;
   contactName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
   status: 'ACTIVE' | 'SUSPENDED';
+  /** The structure's level names, top to bottom, e.g. ["Year", "Group", "Stream", "Section"]. */
+  levelNames: string[];
+  /** Which level (1 = top) is the year of study (promotion moves students from one to the next). */
+  yearLevel: number;
+  weeklyOffDays: number[];
+  timeZone: string;
+  attendanceCorrectionDays: number;
+  admissionNumbering: AdmissionNumbering;
+  admissionNoPattern: string | null;
   modules: { key: string; name: string }[];
 }
 
 /** INACTIVE = closed: records stay readable, nothing new happens there (ADR-0026). */
 export type PlaceStatus = 'ACTIVE' | 'INACTIVE';
 
-export interface Campus {
-  id: string;
-  institutionId: string;
-  name: string;
-  code: string;
-  status: PlaceStatus;
-}
-
-/** A college or school. Added by the super admin only; it has no type (ADR-0025). */
-export interface Institution {
+/** A location of the organization (ADR-0030). Added and closed by EduPlatform only. */
+export interface Branch {
   id: string;
   name: string;
   code: string;
   status: PlaceStatus;
-  /** Only the campuses the user may see, closed ones included. */
-  campuses: { id: string; name: string; code: string; status: PlaceStatus }[];
-  /** Students module: how admission numbers are made, e.g. "{CODE}{YY}{SEQ:4}"; null = by hand. */
-  admissionNoPattern?: string | null;
-  /** Attendance: the institution's time zone and correction window (days). */
-  timeZone?: string;
-  attendanceCorrectionDays?: number;
-  _count: { campuses: number };
-}
-
-export interface InstitutionDetail extends Omit<Institution, '_count' | 'campuses'> {
-  campuses: Campus[];
+  /** GET /branches: its current students. */
+  students?: number;
 }
 
 export type UserStatus = 'ACTIVE' | 'INACTIVE';
@@ -105,15 +100,14 @@ export interface User {
   status: UserStatus;
   lastLoginAt: string | null;
   createdAt: string;
-  /** Each role with its place: neither institution nor campus = the whole organization. */
+  /** Each role with its place: no branch = the whole organization. */
   roles: RoleAssignment[];
 }
 
 export interface RoleAssignment {
   id: string;
   role: { id: string; name: string };
-  institution: { id: string; name: string } | null;
-  campus: { id: string; name: string } | null;
+  branch: { id: string; name: string } | null;
 }
 
 export interface Role {
@@ -139,8 +133,7 @@ export interface AuditLog {
   actorType: string;
   actorId: string | null;
   actorName: string | null;
-  institutionId: string | null;
-  campusId: string | null;
+  branchId: string | null;
   action: string;
   entity: string;
   entityId: string | null;
@@ -161,82 +154,77 @@ export type AcademicYearStatus = 'PLANNED' | 'ACTIVE' | 'CLOSED';
 
 export interface AcademicYear {
   id: string;
-  institutionId: string;
-  institution: { id: string; name: string };
   name: string;
   startsOn: string;
   endsOn: string;
   status: AcademicYearStatus;
 }
 
-/** One level of an institution's classes, e.g. { position: 2, name: 'Group' }. */
-export interface ClassLevel {
-  id: string;
-  position: number;
-  name: string;
-}
-
+/** A class of the academic structure: a year, group, stream, course ... or a section. */
 export interface ClassItem {
   id: string;
   parentId: string | null;
+  /** Only for sections: their branch. */
+  branchId: string | null;
   level: number;
   name: string;
   code: string;
   sortOrder: number;
   isActive: boolean;
+  builtIn: boolean;
+  longTerm: boolean;
+  /** Year-level classes: where students go at promotion; null = they complete. */
+  nextClassId: string | null;
 }
 
-/** GET /campuses/:id/classes */
-export interface CampusClasses {
-  campus: {
-    id: string;
-    name: string;
-    institutionId: string;
-    institution: { id: string; name: string };
-  };
-  levels: ClassLevel[];
+/** GET /academic-structure: everything above sections, for the whole organization. */
+export interface Structure {
+  type: OrganizationType;
+  levels: string[];
+  yearLevel: number;
+  sectionLevel: number;
   classes: ClassItem[];
+  /** School: the classes to tick; Intermediate: the groups to switch on. */
+  builtIn: { code: string; name: string; enabled: boolean }[];
 }
 
-export interface Batch {
-  id: string;
-  institutionId: string;
-  institution: { id: string; name: string };
-  name: string;
-  code: string;
-  stage: string;
-  status: 'ACTIVE' | 'COMPLETED';
+/** A section with its place in the structure, e.g. path "Junior (1st Year) › MPC › JEE Mains". */
+export interface Section extends ClassItem {
+  path: string;
+}
+
+/** GET /branches/:id/sections */
+export interface BranchSections {
+  branch: { id: string; name: string; status: PlaceStatus };
+  sections: Section[];
 }
 
 export interface Subject {
   id: string;
-  institutionId: string;
   name: string;
   code: string;
   isActive: boolean;
 }
 
 export interface SubjectListItem extends Subject {
-  institution: { id: string; name: string };
   _count: { classes: number };
 }
 
 /** GET /classes/:id/subjects */
 export interface ClassSubjects {
-  class: { id: string; name: string; code: string; campusId: string };
+  class: { id: string; name: string; code: string; branchId: string | null };
   /** The classes above this one, top first. */
   path: { id: string; name: string }[];
   own: Subject[];
   inherited: { subject: Subject; from: { id: string; name: string } }[];
-  /** The institution's subjects in use, to choose from. */
+  /** The organization's subjects in use, to choose from. */
   available: Subject[];
 }
 
 export interface Holiday {
   id: string;
-  institutionId: string;
-  campusId: string | null;
-  campus: { id: string; name: string } | null;
+  branchId: string | null;
+  branch: { id: string; name: string } | null;
   name: string;
   startsOn: string;
   endsOn: string;
@@ -244,22 +232,17 @@ export interface Holiday {
 
 /** GET /calendar */
 export interface Calendar {
-  institutions: { id: string; name: string; weeklyOffDays: number[] }[];
+  weeklyOffDays: number[];
   holidays: Holiday[];
 }
 
 // --- Students module -----------------------------------------------------------------------------
 
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER' | 'UNDISCLOSED';
-export type StudentStatus = 'ACTIVE' | 'TRANSFERRED' | 'DISCONTINUED' | 'ALUMNI';
+/** ACTIVE = current; the others are OUTGOING (ADR-0030). */
+export type StudentStatus = 'ACTIVE' | 'TRANSFERRED' | 'DISCONTINUED' | 'COMPLETED';
 export type GuardianRelation = 'FATHER' | 'MOTHER' | 'GUARDIAN' | 'OTHER';
-
-/** A section name with its parent, e.g. { name: 'Section A', parent: { name: 'MPC' } }. */
-export interface SectionRef {
-  id: string;
-  name: string;
-  parent: { name: string } | null;
-}
+export type EnrolmentStatus = 'ACTIVE' | 'MOVED' | 'PROMOTED' | 'COMPLETED' | 'LEFT';
 
 export interface StudentListItem {
   id: string;
@@ -269,13 +252,14 @@ export interface StudentListItem {
   gender: Gender;
   phone: string | null;
   status: StudentStatus;
-  campus: { id: string; name: string };
-  batch: { id: string; name: string; stage: string } | null;
-  enrolments: {
-    rollNo: string | null;
+  branch: { id: string; name: string };
+  /** The latest placement, as text. */
+  placement: {
     academicYear: { id: string; name: string };
-    class: SectionRef;
-  }[];
+    section: string;
+    rollNo: string | null;
+    status: EnrolmentStatus;
+  } | null;
 }
 
 export interface Guardian {
@@ -286,20 +270,36 @@ export interface Guardian {
   occupation: string | null;
 }
 
+/** A placement period (ADR-0030): one section of one branch, from enrolledOn until endedOn. */
 export interface Enrolment {
   id: string;
+  classId: string;
   rollNo: string | null;
-  status: 'ACTIVE' | 'PROMOTED' | 'COMPLETED' | 'LEFT';
+  status: EnrolmentStatus;
+  enrolledOn: string;
+  endedOn: string | null;
+  reason: string | null;
   academicYear: { id: string; name: string; status: AcademicYearStatus };
-  class: SectionRef;
+  branch: { id: string; name: string };
+  /** "Junior (1st Year) › MPC › JEE Mains › JEE-A" */
+  section: string;
+  path: { id: string; name: string; level: number }[];
+}
+
+export interface StatusChange {
+  id: string;
+  fromStatus: StudentStatus | null;
+  toStatus: StudentStatus;
+  effectiveOn: string;
+  reason: string | null;
+  destination: string | null;
+  changedAt: string;
 }
 
 export interface StudentProfile {
   id: string;
-  institutionId: string;
-  campusId: string;
-  institution: { id: string; name: string };
-  campus: { id: string; name: string };
+  branchId: string;
+  branch: { id: string; name: string; status: PlaceStatus };
   admissionNo: string;
   admissionDate: string;
   fullName: string;
@@ -310,9 +310,9 @@ export interface StudentProfile {
   phone: string | null;
   email: string | null;
   address: string | null;
+  previousInstitution: string | null;
+  previousMarks: string | null;
   status: StudentStatus;
-  batchId: string | null;
-  batch: { id: string; name: string; stage: string } | null;
   guardians: {
     id: string;
     relation: GuardianRelation;
@@ -321,37 +321,33 @@ export interface StudentProfile {
   }[];
   /** The student's own portal login. */
   login: PortalLogin | null;
+  /** Newest first. */
   enrolments: Enrolment[];
-  statusChanges: {
-    id: string;
-    fromStatus: StudentStatus | null;
-    toStatus: StudentStatus;
-    effectiveOn: string;
-    reason: string | null;
-  }[];
+  statusChanges: StatusChange[];
 }
 
 /** GET /promotions/preview */
 export interface PromotionPreview {
-  campus: { id: string; name: string };
+  branch: { id: string; name: string };
   fromYear: { id: string; name: string };
   toYear: { id: string; name: string };
   rows: {
     from: { id: string; label: string };
-    suggestion: { kind: 'section'; sectionId: string } | { kind: 'graduate' } | { kind: 'choose' };
+    suggestion: { kind: 'section'; sectionId: string } | { kind: 'complete' } | { kind: 'choose' };
     students: { id: string; fullName: string; admissionNo: string; rollNo: string | null }[];
     alreadyPlaced: number;
   }[];
   sections: { id: string; label: string }[];
 }
 
-/** GET /promotions?campusId= : promotions applied on a campus, newest first. */
+/** GET /promotions?branchId= : promotions applied at a branch, newest first. */
 export interface PromotionRun {
   id: string;
   fromYear: string;
   toYear: string;
   promoted: number;
-  graduated: number;
+  completed: number;
+  students: number;
   createdAt: string;
   undoneAt: string | null;
 }
@@ -365,7 +361,7 @@ export type AttendanceCounts = Record<AttendanceStatus, number>;
 export interface Roster {
   date: string;
   today: string;
-  section: { id: string; name: string; campusId: string };
+  section: { id: string; name: string; label: string; branchId: string };
   academicYear: { id: string; name: string } | null;
   workingDay: boolean;
   reason: string | null;
@@ -388,7 +384,7 @@ export interface Roster {
 export interface DailySummary {
   date: string;
   today: string;
-  campus: { id: string; name: string };
+  branch: { id: string; name: string };
   academicYear: { id: string; name: string } | null;
   workingDay: boolean;
   reason: string | null;
@@ -449,10 +445,9 @@ export interface PortalStudent {
   admissionNo: string;
   dateOfBirth: string;
   status: StudentStatus;
-  institution: { name: string };
-  campus: { name: string };
-  batch: { name: string; stage: string } | null;
-  enrolments: { rollNo: string | null; academicYear: { name: string }; class: SectionRef }[];
+  organization: { name: string };
+  branch: { name: string };
+  placement: { academicYear: string; section: string; rollNo: string | null } | null;
   guardians?: {
     relation: GuardianRelation;
     isPrimary: boolean;
@@ -481,8 +476,6 @@ export interface PortalAttendance {
 
 export interface DocumentType {
   id: string;
-  institutionId: string;
-  institution: { id: string; name: string };
   name: string;
   isRequired: boolean;
   visibleInPortal: boolean;

@@ -1,11 +1,12 @@
 /**
- * /students/promote: move a campus's students on to the next academic year.
- *   1. choose the campus and the two years (a normal form: ?campusId=&fromYearId=&toYearId=);
- *   2. the preview shows each section with its students and a SUGGESTED section in the new year
- *      (the next class at the top level, same path below), or "Finish (alumni)" after the last;
- *   3. change any choice, optionally move the batches to a new stage, and apply.
- * Below: the campus's recent promotions; the newest can be undone while nothing changed since.
- * Needs "students.enrolment.promote" at the campus.
+ * /students/promote: move a branch's students on to the next academic year (ADR-0030).
+ *   1. choose the branch and the two years (a normal form: ?branchId=&fromYearId=&toYearId=);
+ *   2. the preview shows each section with its students and a SUGGESTED section in the new year:
+ *      the year's "next" (Junior → Senior, Class 9 → Class 10), same group / stream, same section
+ *      code; or "Complete" after the final year (Class 10, Senior, Long Term, final year);
+ *   3. change any choice and apply. Nothing is overwritten: last year's placements stay.
+ * Below: the branch's recent promotions; one can be undone while nothing changed since.
+ * Needs "students.enrolment.promote" at the branch (a Principal has it).
  */
 import {
   ActionForm,
@@ -15,7 +16,6 @@ import {
   CardContent,
   Checkbox,
   Field,
-  Input,
   PageHeader,
   Select,
   Table,
@@ -24,43 +24,32 @@ import {
   Th,
 } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
-import { can, canAt, getMe } from '../../../../lib/me';
-import type {
-  AcademicYear,
-  Institution,
-  PromotionPreview,
-  PromotionRun,
-} from '../../../../lib/types';
+import { can, getMe } from '../../../../lib/me';
+import { branchesForWork } from '../../../../lib/places';
+import type { AcademicYear, Branch, PromotionPreview, PromotionRun } from '../../../../lib/types';
 import { applyPromotion, undoPromotion } from '../actions';
-import { campusesInUse } from '../../../../lib/places';
 
 export default async function PromotePage({
   searchParams,
 }: {
-  searchParams: Promise<{ campusId?: string; fromYearId?: string; toYearId?: string }>;
+  searchParams: Promise<{ branchId?: string; fromYearId?: string; toYearId?: string }>;
 }) {
-  const { campusId = '', fromYearId = '', toYearId = '' } = await searchParams;
+  const { branchId = '', fromYearId = '', toYearId = '' } = await searchParams;
   const me = await getMe();
-  const [institutions, years] = await Promise.all([
-    can(me, 'platform.institution.view') ? api<Institution[]>('/institutions') : [],
+  const [allBranches, years] = await Promise.all([
+    can(me, 'platform.branch.view') ? api<Branch[]>('/branches') : [],
     can(me, 'academic.year.view') ? api<AcademicYear[]>('/academic-years') : [],
   ]);
-  const campuses = institutions.flatMap((i) =>
-    campusesInUse(i)
-      .filter((c) =>
-        canAt(me, 'students.enrolment.promote', { institutionId: i.id, campusId: c.id }),
-      )
-      .map((c) => ({ ...c, institution: i })),
-  );
-  const ready = campusId && fromYearId && toYearId;
+  const branches = branchesForWork(me, allBranches, 'students.enrolment.promote');
+  const ready = branchId && fromYearId && toYearId;
   const preview = ready
     ? await api<PromotionPreview>(
-        `/promotions/preview?${new URLSearchParams({ campusId, fromYearId, toYearId })}`,
+        `/promotions/preview?${new URLSearchParams({ branchId, fromYearId, toYearId })}`,
       )
     : null;
   const total = preview?.rows.reduce((n, r) => n + r.students.length, 0) ?? 0;
-  const runs = campusId
-    ? await api<PromotionRun[]>(`/promotions?${new URLSearchParams({ campusId })}`)
+  const runs = branchId
+    ? await api<PromotionRun[]>(`/promotions?${new URLSearchParams({ branchId })}`)
     : [];
 
   return (
@@ -68,15 +57,15 @@ export default async function PromotePage({
       <PageHeader
         back={{ href: '/students', label: 'Back to students' }}
         title="Promote students"
-        description="Move a campus's students on to the next academic year, section by section."
+        description="Move a branch's students on to the next academic year, section by section."
       />
 
       <form className="mb-6 flex flex-wrap items-end gap-3">
-        <Field label="Campus" htmlFor="campusId">
-          <Select id="campusId" name="campusId" defaultValue={campusId} required className="w-56">
-            {campuses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} ({c.institution.code})
+        <Field label="Branch" htmlFor="branchId">
+          <Select id="branchId" name="branchId" defaultValue={branchId} required className="w-56">
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
               </option>
             ))}
           </Select>
@@ -91,7 +80,7 @@ export default async function PromotePage({
           >
             {years.map((y) => (
               <option key={y.id} value={y.id}>
-                {y.name} ({y.institution.name})
+                {y.name}
               </option>
             ))}
           </Select>
@@ -102,7 +91,7 @@ export default async function PromotePage({
               .filter((y) => y.status !== 'CLOSED')
               .map((y) => (
                 <option key={y.id} value={y.id}>
-                  {y.name} ({y.institution.name})
+                  {y.name}
                 </option>
               ))}
           </Select>
@@ -120,7 +109,7 @@ export default async function PromotePage({
           confirmMessage={`Promote these students from ${preview.fromYear.name} to ${preview.toYear.name}?`}
           className="gap-6"
         >
-          <input type="hidden" name="campusId" value={preview.campus.id} />
+          <input type="hidden" name="branchId" value={preview.branch.id} />
           <input type="hidden" name="fromYearId" value={preview.fromYear.id} />
           <input type="hidden" name="toYearId" value={preview.toYear.id} />
 
@@ -137,8 +126,8 @@ export default async function PromotePage({
                 const suggested =
                   row.suggestion.kind === 'section'
                     ? `section:${row.suggestion.sectionId}`
-                    : row.suggestion.kind === 'graduate'
-                      ? 'graduate'
+                    : row.suggestion.kind === 'complete'
+                      ? 'complete'
                       : 'skip';
                 return (
                   <tr key={row.from.id}>
@@ -177,7 +166,7 @@ export default async function PromotePage({
                               {s.label}
                             </option>
                           ))}
-                          <option value="graduate">Finish (become alumni)</option>
+                          <option value="complete">Complete (become outgoing)</option>
                           <option value="skip">Don&apos;t promote</option>
                         </Select>
                         {row.suggestion.kind === 'choose' && (
@@ -191,7 +180,7 @@ export default async function PromotePage({
               {preview.rows.length === 0 && (
                 <tr>
                   <Td colSpan={3} className="py-8 text-center text-muted-foreground">
-                    No active students in {preview.fromYear.name} on this campus.
+                    No current students in {preview.fromYear.name} at this branch.
                   </Td>
                 </tr>
               )}
@@ -200,13 +189,6 @@ export default async function PromotePage({
 
           <Card className="max-w-xl">
             <CardContent className="flex flex-col gap-4 pt-6">
-              <Field
-                label="Move their batches to the stage"
-                htmlFor="batchStage"
-                hint="Optional, e.g. Senior. Leave empty to keep the batches as they are."
-              >
-                <Input id="batchStage" name="batchStage" placeholder="Senior" />
-              </Field>
               <Checkbox name="keepRollNumbers" label="Keep each student's roll number" />
             </CardContent>
           </Card>
@@ -215,14 +197,14 @@ export default async function PromotePage({
 
       {runs.length > 0 && (
         <>
-          <h2 className="mb-3 mt-10 text-lg font-semibold">Recent promotions on this campus</h2>
+          <h2 className="mb-3 mt-10 text-lg font-semibold">Recent promotions at this branch</h2>
           <Table>
             <TableHead>
               <tr>
                 <Th>When</Th>
                 <Th>From → to</Th>
                 <Th>Promoted</Th>
-                <Th>Finished</Th>
+                <Th>Completed</Th>
                 <Th />
               </tr>
             </TableHead>
@@ -236,7 +218,7 @@ export default async function PromotePage({
                     {run.fromYear} → {run.toYear}
                   </Td>
                   <Td>{run.promoted}</Td>
-                  <Td>{run.graduated}</Td>
+                  <Td>{run.completed}</Td>
                   <Td className="text-right">
                     {run.undoneAt ? (
                       <Badge variant="outline">

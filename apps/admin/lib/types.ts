@@ -24,10 +24,23 @@ export interface TwoFactorSetup {
 
 export type OrganizationStatus = 'ACTIVE' | 'SUSPENDED';
 
+/** What kind of institution an organization is: decides its academic structure (ADR-0030). */
+export type OrganizationType = 'SCHOOL' | 'INTERMEDIATE' | 'DEGREE' | 'ENGINEERING';
+
+export const ORGANIZATION_TYPES: Record<OrganizationType, string> = {
+  SCHOOL: 'School (Nursery – Class 10)',
+  INTERMEDIATE: 'Intermediate college (Junior / Senior, groups, streams)',
+  DEGREE: 'Degree college (courses, specializations, years)',
+  ENGINEERING: 'Engineering college (B.Tech, branches, years)',
+};
+
 export interface Organization {
   id: string;
   name: string;
   slug: string;
+  code: string;
+  type: OrganizationType;
+  levelNames: string[];
   contactName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
@@ -36,7 +49,7 @@ export interface Organization {
 }
 
 export interface OrganizationListItem extends Organization {
-  _count: { users: number; institutions: number };
+  _count: { users: number; branches: number };
 }
 
 export interface Module {
@@ -47,25 +60,24 @@ export interface Module {
 }
 
 export interface OrganizationDetail extends Organization {
-  _count: { users: number; institutions: number; campuses: number; roles: number };
+  /** classes: the size of its academic structure (the type can change only while it has none). */
+  _count: { users: number; branches: number; roles: number; classes: number };
   admins: { id: string; name: string; email: string; status: string; lastLoginAt: string | null }[];
-  /** Only the super admin adds and deletes institutions (ADR-0025). */
-  institutions: {
+  /** Only the super admin adds, closes and deletes branches (ADR-0030). */
+  branches: {
     id: string;
     name: string;
     code: string;
     /** INACTIVE = closed: records stay, nothing new happens there (ADR-0026). */
     status: 'ACTIVE' | 'INACTIVE';
-    _count: { campuses: number };
   }[];
-  campuses: { active: number; inactive: number };
   modules: (Module & { enabled: boolean })[];
 }
 
 export interface Dashboard {
   organizations: { total: number; active: number; suspended: number };
   users: number;
-  institutions: number;
+  branches: number;
   recentOrganizations: Organization[];
 }
 
@@ -84,6 +96,8 @@ export interface PredefinedRole {
   permissions: string[];
   /** false = given from a student's record, not the Users page (Parent, Student). */
   assignable: boolean;
+  /** true = comes with EduPlatform (can't be deleted); false = created in this console. */
+  builtIn: boolean;
   /** Organizations that changed this role themselves: your changes don't reach them (ADR-0029). */
   customizedIn: number;
 }
@@ -100,8 +114,7 @@ export interface PlatformAuditEntry {
   actorType: string;
   actorId: string | null;
   actorName: string | null;
-  institutionId: string | null;
-  campusId: string | null;
+  branchId: string | null;
   action: string;
   entity: string;
   entityId: string | null;
