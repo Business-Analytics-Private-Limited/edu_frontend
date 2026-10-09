@@ -16,7 +16,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      {/* Browser extensions (e.g. Grammarly) add attributes to <body> before React loads;
+          ignore those differences here only. */}
+      <body suppressHydrationWarning>
         {children}
         {/* Pop-up alerts after saving, and "Are you sure?" (packages/ui alerts.tsx) */}
         <AlertHost flashCookie={FLASH_COOKIE} />
