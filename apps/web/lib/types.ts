@@ -173,6 +173,11 @@ export interface ClassItem {
   isActive: boolean;
   builtIn: boolean;
   longTerm: boolean;
+  /**
+   * Degree / Engineering: the hidden "whole course" level of a course without specializations
+   * (ADR-0033); left out of names ("B.Com › 1st Year").
+   */
+  placeholder: boolean;
   /** Year-level classes: where students go at promotion; null = they complete. */
   nextClassId: string | null;
 }
@@ -188,6 +193,8 @@ export interface Structure {
   builtIn: { code: string; name: string; enabled: boolean }[];
   /** Intermediate: the groups each branch runs, { branchId: ["MPC", "BIPC"] } (ADR-0032). */
   branchGroups: Record<string, string[]>;
+  /** How many sections (in every branch) are under each class. */
+  sectionCounts: Record<string, number>;
 }
 
 /** A section with its place in the structure, e.g. path "Junior (1st Year) › MPC › JEE Mains". */

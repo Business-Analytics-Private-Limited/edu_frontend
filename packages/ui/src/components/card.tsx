@@ -1,5 +1,6 @@
 /**
- * Card: a bordered panel for grouping content.
+ * Card: a bordered panel for grouping content. `min-w-0` lets it shrink inside a grid on
+ * phones (wide content such as a table then scrolls inside it instead of stretching it).
  *
  *   <Card>
  *     <CardHeader>
@@ -16,7 +17,7 @@ import { cn } from '../lib/cn';
 export function Card({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
-      className={cn('rounded-lg border bg-card text-card-foreground shadow-sm', className)}
+      className={cn('min-w-0 rounded-lg border bg-card text-card-foreground shadow-sm', className)}
       {...props}
     />
   );

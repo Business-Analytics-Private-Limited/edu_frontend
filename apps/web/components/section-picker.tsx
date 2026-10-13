@@ -27,6 +27,8 @@ interface Node {
   name: string;
   sortOrder: number;
   isActive: boolean;
+  /** The hidden "whole course" level (ADR-0033): chosen by itself when it's the only one. */
+  placeholder?: boolean;
 }
 
 interface SectionNode extends Node {
@@ -85,12 +87,24 @@ export function SectionPicker(props: SectionPickerProps) {
   }, [classes, branchSections]);
 
   const choose = (level: number, id: string) => {
-    setChosen([...chosen.slice(0, level), id]);
+    setChosen([...steps.slice(0, level).map((step) => step.value), id]);
     setSectionId('');
   };
 
   const sectionLevel = levels.length - 1; // index of the section level
-  const lastChosen = chosen[sectionLevel - 1] ?? '';
+  // The choices at each level. A level whose only choice is the hidden "whole course" level
+  // (a course without specializations) is chosen by itself and not shown (ADR-0033).
+  const steps: { options: Node[]; value: string; hidden: boolean }[] = [];
+  for (let level = 0; level < sectionLevel; level++) {
+    const parentId = level === 0 ? null : steps[level - 1].value;
+    if (level > 0 && !parentId) break;
+    const options = classes
+      .filter((c) => c.parentId === parentId && c.isActive && reachable.has(c.id))
+      .sort(byOrder);
+    const hidden = options.length === 1 && !!options[0].placeholder;
+    steps.push({ options, value: hidden ? options[0].id : (chosen[level] ?? ''), hidden });
+  }
+  const lastChosen = steps.length === sectionLevel ? steps[sectionLevel - 1].value : '';
   const sectionChoices = branchSections.filter((s) => s.parentId === lastChosen).sort(byOrder);
 
   return (
@@ -117,23 +131,20 @@ export function SectionPicker(props: SectionPickerProps) {
         </Field>
       )}
       {props.afterBranch}
-      {levels.slice(0, sectionLevel).map((levelName, level) => {
-        const parentId = level === 0 ? null : chosen[level - 1];
-        if (level > 0 && !parentId) return null;
-        const options = classes
-          .filter((c) => c.parentId === parentId && c.isActive && reachable.has(c.id))
-          .sort(byOrder);
+      {steps.map((step, level) => {
+        if (step.hidden) return null;
+        const levelName = levels[level];
         return (
           <Field key={levelName} label={levelName} htmlFor={`picker-${level}`}>
             <Select
               id={`picker-${level}`}
-              value={chosen[level] ?? ''}
+              value={step.value}
               onChange={(e) => choose(level, e.target.value)}
             >
               <option value="">
-                {options.length ? `Choose…` : `No ${levelName.toLowerCase()} with sections`}
+                {step.options.length ? `Choose…` : `No ${levelName.toLowerCase()} with sections`}
               </option>
-              {options.map((c) => (
+              {step.options.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>

@@ -70,6 +70,7 @@ export default async function SectionsPage({
   const byId = new Map(structure.classes.map((c) => [c.id, c]));
   const label = (c: ClassItem): string => {
     const parent = c.parentId ? byId.get(c.parentId) : undefined;
+    if (c.placeholder) return parent ? label(parent) : ''; // hidden "whole course" level
     return parent ? `${label(parent)} › ${c.name}` : c.name;
   };
   // Intermediate: only under the groups this branch runs (ADR-0032).

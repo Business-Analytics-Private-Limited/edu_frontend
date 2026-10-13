@@ -19,13 +19,20 @@ export async function pickerData(branchIds: string[]) {
   return { levels: structure.levels, classes: structure.classes, sections };
 }
 
-/** Every class above sections with its path ("Junior › MPC › JEE Mains"), in tree order. */
+/**
+ * Every class above sections with its path ("Junior › MPC › JEE Mains"), in tree order. The
+ * hidden "whole course" level (ADR-0033) is not listed and left out of the names.
+ */
 export function classPaths(classes: ClassItem[]): { id: string; label: string }[] {
   const byOrder = (a: ClassItem, b: ClassItem) =>
     a.sortOrder - b.sortOrder || a.name.localeCompare(b.name);
   const out: { id: string; label: string }[] = [];
   const walk = (parentId: string | null, prefix: string) => {
     for (const c of classes.filter((x) => x.parentId === parentId).sort(byOrder)) {
+      if (c.placeholder) {
+        walk(c.id, prefix);
+        continue;
+      }
       const label = prefix ? `${prefix} › ${c.name}` : c.name;
       out.push({ id: c.id, label });
       walk(c.id, label);

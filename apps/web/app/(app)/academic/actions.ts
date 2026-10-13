@@ -150,15 +150,57 @@ export async function deleteStream(groupCode: string, code: string): Promise<For
 }
 
 /** Degree / Engineering. */
+/**
+ * A course (ADR-0033). "Specializations: No" sends its own number of years (B.Com: 1st ... 3rd
+ * Year); "Yes" sends none, and specializations (CSE, ECE ...) are added next.
+ */
 export async function addCourse(_previous: FormState, form: FormData): Promise<FormState> {
+  const withSpecializations = form.get('specializations') === 'yes';
   return run(
     STRUCTURE,
     () =>
       api('/academic-structure/courses', {
         method: 'POST',
-        body: { name: text(form, 'name'), code: text(form, 'code').toUpperCase() },
+        body: {
+          name: text(form, 'name'),
+          code: text(form, 'code').toUpperCase(),
+          years: withSpecializations ? undefined : Number(form.get('years')),
+        },
       }),
-    'Course added',
+    withSpecializations
+      ? 'Course added: now add its specializations'
+      : 'Course added with its years',
+  );
+}
+
+/** Edits a course or a specialization: name, code and (where it has its own) years. */
+export async function updateProgramme(
+  id: string,
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  const years = form.get('years');
+  return run(
+    STRUCTURE,
+    () =>
+      api(`/academic-structure/programmes/${id}`, {
+        method: 'PATCH',
+        body: {
+          name: text(form, 'name'),
+          code: text(form, 'code').toUpperCase(),
+          ...(years !== null && { years: Number(years) }),
+        },
+      }),
+    'Saved',
+  );
+}
+
+/** Deletes a course or a specialization with its years (only while nothing has sections). */
+export async function deleteProgramme(id: string): Promise<FormState> {
+  return run(
+    STRUCTURE,
+    () => api(`/academic-structure/programmes/${id}`, { method: 'DELETE' }),
+    'Deleted',
   );
 }
 

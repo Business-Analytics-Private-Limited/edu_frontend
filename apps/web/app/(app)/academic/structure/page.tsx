@@ -15,34 +15,44 @@
 import {
   ActionForm,
   Badge,
+  Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
   Checkbox,
+  Drawer,
   Field,
   Input,
   PageHeader,
   Select,
+  Table,
+  TableHead,
+  Td,
+  Th,
 } from '@eduplatform/ui';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { Fragment } from 'react';
 import { api } from '../../../../lib/api';
 import { ORGANIZATION_TYPES } from '../../../../lib/labels';
 import { can, canAt, getMe } from '../../../../lib/me';
 import type { Branch, ClassItem, Me, Structure } from '../../../../lib/types';
 import {
-  addCourse,
-  addSpecialization,
+  addSpecialization as addSpecializationAction,
   addStream,
   deleteClass,
+  deleteProgramme,
   deleteStream,
   setBranchGroups,
   setGroups,
   setLevelNames,
   setNext,
   setSchoolClasses,
+  updateProgramme,
 } from '../actions';
+import { AddCourseForm } from './add-course-form';
 
 const PATH = '/academic/structure';
 const byOrder = (a: ClassItem, b: ClassItem) =>
@@ -64,9 +74,17 @@ export default async function StructurePage() {
   const childrenOf = (id: string | null) => classes.filter((c) => c.parentId === id).sort(byOrder);
   const label = (c: ClassItem): string => {
     const parent = c.parentId ? classes.find((p) => p.id === c.parentId) : undefined;
+    if (c.placeholder) return parent ? label(parent) : ''; // hidden "whole course" level
     return parent ? `${label(parent)} › ${c.name}` : c.name;
   };
-  const years = classes.filter((c) => c.level === structure.yearLevel);
+  // Year-level classes, course by course (B.Com 1st, 2nd, 3rd Year; then B.Sc …).
+  const parentLabel = (c: ClassItem) => {
+    const parent = c.parentId ? classes.find((p) => p.id === c.parentId) : undefined;
+    return parent ? label(parent) : '';
+  };
+  const years = classes
+    .filter((c) => c.level === structure.yearLevel)
+    .sort((a, b) => parentLabel(a).localeCompare(parentLabel(b)) || byOrder(a, b));
 
   return (
     <>
@@ -104,21 +122,24 @@ export default async function StructurePage() {
               <p className="text-sm text-muted-foreground">Nothing set up yet.</p>
             )}
             {years.map((year) => (
-              <div key={year.id} className="flex flex-wrap items-end gap-2">
-                <span className="sm:min-w-48 text-sm font-medium">{label(year)}</span>
+              <div
+                key={year.id}
+                className="grid items-center gap-2 border-b pb-3 last:border-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]"
+              >
+                <span className="text-sm font-medium">{label(year)}</span>
                 {may.update && !year.longTerm ? (
                   <ActionForm
                     action={setNext.bind(null, year.id)}
                     submitLabel="Save"
                     submitSize="sm"
                     submitVariant="outline"
-                    className="flex-row items-end gap-2"
+                    className="flex-row items-center gap-2 [&>div:last-child]:shrink-0"
                   >
                     <Select
                       name="nextClassId"
                       defaultValue={year.nextClassId ?? ''}
-                      aria-label={`After ${year.name}`}
-                      className="w-full sm:w-56"
+                      aria-label={`After ${label(year)}`}
+                      className="min-w-0 flex-1"
                     >
                       <option value="">Completes</option>
                       {years
@@ -337,85 +358,294 @@ function IntermediateSetup({
   );
 }
 
+/**
+ * Degree / Engineering: courses and their specializations as a table (ADR-0033). A course
+ * either has its own years (no specializations: B.Com) or specializations with their own years
+ * (B.Tech › CSE). Each row: Edit (name, code, years) and, for a course, Add specialization, in a
+ * slide-in panel; Delete only while nothing has sections under it.
+ */
 function Courses({
   structure,
   may,
   childrenOf,
 }: {
   structure: Structure;
-  may: { create: boolean };
+  may: { create: boolean; update: boolean; delete: boolean };
   childrenOf: (id: string | null) => ClassItem[];
 }) {
   const courses = childrenOf(null);
+  const defaultYears = structure.type === 'ENGINEERING' ? 4 : 3;
+  const sections = (id: string) => structure.sectionCounts[id] ?? 0;
+  const yearsOf = (id: string) => childrenOf(id).length;
+
   return (
     <Card className="lg:col-span-2">
       <CardHeader>
-        <CardTitle>Courses and specializations</CardTitle>
-        <CardDescription>
-          e.g. B.Tech › Computer Science › 1st Year … 4th Year. A course without specializations
-          (B.Com) gets one called &quot;General&quot;.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-6">
-        {courses.map((course) => (
-          <div key={course.id} className="rounded-md border p-4">
-            <p className="font-medium">{course.name}</p>
-            <ul className="mt-2 flex flex-col gap-1 text-sm">
-              {childrenOf(course.id).map((spec) => (
-                <li key={spec.id}>
-                  {spec.name}{' '}
-                  <span className="text-muted-foreground">
-                    ({childrenOf(spec.id).length} years)
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {may.create && (
-              <ActionForm
-                action={addSpecialization.bind(null, course.id)}
-                submitLabel="Add specialization"
-                resetOnSuccess
-                className="mt-3"
-              >
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <Field label="Specialization" htmlFor={`spec-${course.id}`}>
-                    <Input id={`spec-${course.id}`} name="name" required placeholder="CSE" />
-                  </Field>
-                  <Field label="Code" htmlFor={`spec-code-${course.id}`}>
-                    <Input id={`spec-code-${course.id}`} name="code" required maxLength={20} />
-                  </Field>
-                  <Field label="Years" htmlFor={`spec-years-${course.id}`}>
-                    <Select
-                      id={`spec-years-${course.id}`}
-                      name="years"
-                      defaultValue={structure.type === 'ENGINEERING' ? '4' : '3'}
-                    >
-                      {[1, 2, 3, 4, 5, 6].map((n) => (
-                        <option key={n} value={n}>
-                          {n}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                </div>
-              </ActionForm>
-            )}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle>Courses and specializations</CardTitle>
+            <CardDescription>
+              A course has its own years (B.Com: 1st … 3rd Year), or specializations with their
+              years (B.Tech › CSE: 1st … 4th Year). Sections are added per branch, under a year.
+            </CardDescription>
           </div>
-        ))}
-        {may.create && (
-          <ActionForm action={addCourse} submitLabel="Add course" resetOnSuccess>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Course" htmlFor="courseName">
-                <Input id="courseName" name="name" required placeholder="B.Tech" />
-              </Field>
-              <Field label="Code" htmlFor="courseCode">
-                <Input id="courseCode" name="code" required placeholder="BTECH" maxLength={20} />
-              </Field>
-            </div>
-          </ActionForm>
+          {may.create && (
+            <Drawer
+              title="Add course"
+              description="Its years, or specializations added next."
+              trigger={
+                <>
+                  <Plus /> Add course
+                </>
+              }
+              triggerVariant="default"
+            >
+              <AddCourseForm defaultYears={defaultYears} />
+            </Drawer>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {courses.length === 0 ? (
+          <p className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+            No courses yet. Click <span className="font-medium">Add course</span>.
+          </p>
+        ) : (
+          <Table>
+            <TableHead>
+              <tr>
+                <Th>Course</Th>
+                <Th>Specialization</Th>
+                <Th className="text-center">Years</Th>
+                <Th className="text-center">Sections</Th>
+                <Th className="text-right">Actions</Th>
+              </tr>
+            </TableHead>
+            <tbody>
+              {courses.map((course) => {
+                const children = childrenOf(course.id);
+                const whole = children.find((c) => c.placeholder);
+                const specializations = children.filter((c) => !c.placeholder);
+                const ownYears = specializations.length === 0;
+                return (
+                  <Fragment key={course.id}>
+                    <tr className="bg-muted/20">
+                      <Td className="font-medium">
+                        {course.name}{' '}
+                        <Badge variant="outline" className="ml-1 font-mono">
+                          {course.code}
+                        </Badge>
+                      </Td>
+                      <Td className="text-muted-foreground">
+                        {ownYears ? 'No specializations' : `${specializations.length} below`}
+                      </Td>
+                      <Td className="text-center tabular-nums">
+                        {ownYears ? (whole ? yearsOf(whole.id) : '—') : ''}
+                      </Td>
+                      <Td className="text-center tabular-nums">{sections(course.id)}</Td>
+                      <Td>
+                        <RowButtons
+                          item={course}
+                          kind="course"
+                          editYears={ownYears ? (whole ? yearsOf(whole.id) : defaultYears) : null}
+                          sections={sections(course.id)}
+                          may={may}
+                          addSpecialization={
+                            may.create ? { courseId: course.id, defaultYears } : undefined
+                          }
+                        />
+                      </Td>
+                    </tr>
+                    {whole && !ownYears && (
+                      <tr>
+                        <Td />
+                        <Td className="pl-6 text-muted-foreground">
+                          ↳ Whole course (has sections)
+                        </Td>
+                        <Td className="text-center tabular-nums">{yearsOf(whole.id)}</Td>
+                        <Td className="text-center tabular-nums">{sections(whole.id)}</Td>
+                        <Td />
+                      </tr>
+                    )}
+                    {specializations.map((spec) => (
+                      <tr key={spec.id}>
+                        <Td />
+                        <Td>
+                          <span className="pl-2 text-muted-foreground">↳ </span>
+                          {spec.name}{' '}
+                          <Badge variant="outline" className="ml-1 font-mono">
+                            {spec.code}
+                          </Badge>
+                        </Td>
+                        <Td className="text-center tabular-nums">{yearsOf(spec.id)}</Td>
+                        <Td className="text-center tabular-nums">{sections(spec.id)}</Td>
+                        <Td>
+                          <RowButtons
+                            item={spec}
+                            kind="specialization"
+                            editYears={yearsOf(spec.id)}
+                            sections={sections(spec.id)}
+                            may={may}
+                          />
+                        </Td>
+                      </tr>
+                    ))}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </Table>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/** Edit / Add specialization / Delete for one row of the courses table. */
+function RowButtons({
+  item,
+  kind,
+  editYears,
+  sections,
+  may,
+  addSpecialization,
+}: {
+  item: ClassItem;
+  kind: 'course' | 'specialization';
+  /** The years to edit, or null when the course's years are per specialization. */
+  editYears: number | null;
+  sections: number;
+  may: { create: boolean; update: boolean; delete: boolean };
+  addSpecialization?: { courseId: string; defaultYears: number };
+}) {
+  return (
+    <div className="flex flex-wrap justify-end gap-1.5">
+      {may.update && (
+        <Drawer
+          title={`Edit ${item.name}`}
+          description={
+            kind === 'course' && editYears === null
+              ? 'Its years are set per specialization.'
+              : 'More years are added at the end; fewer remove the last years while they are empty.'
+          }
+          trigger={
+            <>
+              <Pencil /> Edit
+            </>
+          }
+          triggerSize="sm"
+        >
+          <ActionForm action={updateProgramme.bind(null, item.id)} submitLabel="Save">
+            <Field label="Name *" htmlFor={`name-${item.id}`}>
+              <Input
+                id={`name-${item.id}`}
+                name="name"
+                required
+                maxLength={100}
+                defaultValue={item.name}
+              />
+            </Field>
+            <Field label="Code *" htmlFor={`code-${item.id}`}>
+              <Input
+                id={`code-${item.id}`}
+                name="code"
+                required
+                maxLength={20}
+                pattern="[A-Za-z0-9_\-]+"
+                title="Letters, digits, _ and - only"
+                defaultValue={item.code}
+              />
+            </Field>
+            {editYears !== null && (
+              <Field label="Years of study" htmlFor={`years-${item.id}`}>
+                <Select id={`years-${item.id}`} name="years" defaultValue={String(editYears)}>
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                    <option key={n} value={n}>
+                      {n} {n === 1 ? 'year' : 'years'}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+          </ActionForm>
+        </Drawer>
+      )}
+      {addSpecialization && (
+        <Drawer
+          title={`Add a specialization to ${item.name}`}
+          description={
+            editYears !== null && sections === 0
+              ? `${item.name}'s own years are replaced by its specializations' years.`
+              : 'Each specialization has its own years.'
+          }
+          trigger={
+            <>
+              <Plus /> Specialization
+            </>
+          }
+          triggerSize="sm"
+        >
+          <ActionForm
+            action={addSpecializationAction.bind(null, addSpecialization.courseId)}
+            submitLabel="Add specialization"
+            resetOnSuccess
+          >
+            <Field label="Specialization *" htmlFor={`spec-${item.id}`}>
+              <Input
+                id={`spec-${item.id}`}
+                name="name"
+                required
+                maxLength={100}
+                placeholder="e.g. Computer Science"
+              />
+            </Field>
+            <Field label="Code *" htmlFor={`spec-code-${item.id}`}>
+              <Input
+                id={`spec-code-${item.id}`}
+                name="code"
+                required
+                maxLength={20}
+                pattern="[A-Za-z0-9_\-]+"
+                title="Letters, digits, _ and - only"
+                placeholder="CSE"
+              />
+            </Field>
+            <Field label="Years of study" htmlFor={`spec-years-${item.id}`}>
+              <Select
+                id={`spec-years-${item.id}`}
+                name="years"
+                defaultValue={String(addSpecialization.defaultYears)}
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                  <option key={n} value={n}>
+                    {n} {n === 1 ? 'year' : 'years'}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </ActionForm>
+        </Drawer>
+      )}
+      {may.delete &&
+        (sections > 0 ? (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled
+            title={`Has ${sections} section(s): delete those first`}
+          >
+            <Trash2 /> Delete
+          </Button>
+        ) : (
+          <ActionForm
+            action={deleteProgramme.bind(null, item.id)}
+            submitLabel="Delete"
+            submitVariant="destructive"
+            submitSize="sm"
+            confirmMessage={`Delete ${item.name}${kind === 'course' ? ' with its specializations and years' : ' with its years'}?`}
+          />
+        ))}
+    </div>
   );
 }
 
@@ -431,9 +661,11 @@ function Tree({
   me: Me;
   canDelete: boolean;
 }) {
+  // The hidden "whole course" level (ADR-0033) isn't shown: its years appear under the course.
+  const shown = nodes.flatMap((n) => (n.placeholder ? childrenOf(n.id) : [n]));
   return (
     <ul className="flex flex-col gap-1 text-sm">
-      {nodes.map((node) => (
+      {shown.map((node) => (
         <li key={node.id}>
           <div className="flex items-center gap-2 py-0.5">
             <span className={node.isActive ? '' : 'text-muted-foreground line-through'}>
