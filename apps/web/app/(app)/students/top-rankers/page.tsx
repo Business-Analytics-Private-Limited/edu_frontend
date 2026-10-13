@@ -12,6 +12,7 @@ import {
   StudentFilters,
   type StudentFilterValues,
 } from '../../../../components/student-filters';
+import { StudentCards } from '../../../../components/student-cards';
 import { RowActions } from '../../../../components/student-row-actions';
 import { api } from '../../../../lib/api';
 import { can, canAt, getMe } from '../../../../lib/me';
@@ -71,7 +72,7 @@ export default async function TopRankersPage({ searchParams }: { searchParams: P
         description={`${result.total} top ranker(s)${level ? `: ${LEARNER_LEVELS[level]}` : ''}`}
       />
 
-      <div className="mb-4 flex gap-1 border-b">
+      <div className="mb-4 flex gap-1 overflow-x-auto border-b [&>*]:shrink-0">
         {[undefined, ...(Object.keys(LEARNER_LEVELS) as LearnerLevel[])].map((tab) => (
           <Link
             key={tab ?? 'all'}
@@ -96,67 +97,87 @@ export default async function TopRankersPage({ searchParams }: { searchParams: P
         sections={branchSections?.sections ?? []}
       />
 
-      <Table>
-        <TableHead>
-          <tr>
-            <Th>Adm. no</Th>
-            <Th>Name</Th>
-            <Th>Branch</Th>
-            <Th>Section</Th>
-            <Th>Learner level</Th>
-            <Th className="w-20 text-right">Actions</Th>
-          </tr>
-        </TableHead>
-        <tbody>
-          {result.items.map((s) => (
-            <tr key={s.id}>
-              <Td className="font-mono text-xs">{s.admissionNo}</Td>
-              <Td>
-                <Link
-                  href={`/students/${s.id}`}
-                  className="font-medium text-primary hover:underline"
-                >
-                  {s.fullName}
-                  {s.surname ? ` ${s.surname}` : ''}
-                </Link>
-              </Td>
-              <Td>{s.branch.name}</Td>
-              <Td>
-                {s.placement ? (
-                  s.placement.section
-                ) : (
-                  <span className="text-muted-foreground">Not placed</span>
-                )}
-              </Td>
-              <Td>
-                {s.learnerLevel ? (
-                  <Badge variant={LEVEL_BADGE[s.learnerLevel]}>
-                    {LEARNER_LEVELS[s.learnerLevel]}
-                  </Badge>
-                ) : (
-                  <span className="text-muted-foreground">Not set</span>
-                )}
-              </Td>
-              <Td className="text-right">
-                <RowActions
-                  id={s.id}
-                  canEdit={canAt(me, 'students.student.update', { branchId: s.branch.id })}
-                />
-              </Td>
-            </tr>
-          ))}
-          {result.items.length === 0 && (
+      <div className="md:hidden">
+        <StudentCards
+          students={result.items}
+          editable={
+            new Set(
+              result.items
+                .filter((s) => canAt(me, 'students.student.update', { branchId: s.branch.id }))
+                .map((s) => s.id),
+            )
+          }
+          empty="No top rankers here. Mark a student on their Edit page (Top ranker)."
+          extra={(s) =>
+            s.learnerLevel && (
+              <Badge variant={LEVEL_BADGE[s.learnerLevel]}>{LEARNER_LEVELS[s.learnerLevel]}</Badge>
+            )
+          }
+        />
+      </div>
+      <div className="hidden md:block">
+        <Table>
+          <TableHead>
             <tr>
-              <Td colSpan={6} className="py-8 text-center text-muted-foreground">
-                No top rankers here. Mark a student on their Edit page (Top ranker).
-              </Td>
+              <Th>Adm. no</Th>
+              <Th>Name</Th>
+              <Th>Branch</Th>
+              <Th>Section</Th>
+              <Th>Learner level</Th>
+              <Th className="w-20 text-right">Actions</Th>
             </tr>
-          )}
-        </tbody>
-      </Table>
+          </TableHead>
+          <tbody>
+            {result.items.map((s) => (
+              <tr key={s.id}>
+                <Td className="font-mono text-xs">{s.admissionNo}</Td>
+                <Td>
+                  <Link
+                    href={`/students/${s.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {s.fullName}
+                    {s.surname ? ` ${s.surname}` : ''}
+                  </Link>
+                </Td>
+                <Td>{s.branch.name}</Td>
+                <Td>
+                  {s.placement ? (
+                    s.placement.section
+                  ) : (
+                    <span className="text-muted-foreground">Not placed</span>
+                  )}
+                </Td>
+                <Td>
+                  {s.learnerLevel ? (
+                    <Badge variant={LEVEL_BADGE[s.learnerLevel]}>
+                      {LEARNER_LEVELS[s.learnerLevel]}
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground">Not set</span>
+                  )}
+                </Td>
+                <Td className="text-right">
+                  <RowActions
+                    id={s.id}
+                    canEdit={canAt(me, 'students.student.update', { branchId: s.branch.id })}
+                  />
+                </Td>
+              </tr>
+            ))}
+            {result.items.length === 0 && (
+              <tr>
+                <Td colSpan={6} className="py-8 text-center text-muted-foreground">
+                  No top rankers here. Mark a student on their Edit page (Top ranker).
+                </Td>
+              </tr>
+            )}
+          </tbody>
+        </Table>
+      </div>
 
       {pages > 1 && (
-        <div className="mt-4 flex items-center gap-2 text-sm">
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
           {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
             <Link
               key={n}

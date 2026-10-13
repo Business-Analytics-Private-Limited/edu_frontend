@@ -53,7 +53,7 @@ export default async function AuditPage({
       />
 
       <form className="mb-4 flex flex-wrap gap-2">
-        <Select name="organizationId" defaultValue={organizationId} className="w-64">
+        <Select name="organizationId" defaultValue={organizationId} className="w-full sm:w-64">
           <option value="">All organizations</option>
           <option value="platform">EduPlatform itself</option>
           {organizations.items.map((org) => (
@@ -62,7 +62,7 @@ export default async function AuditPage({
             </option>
           ))}
         </Select>
-        <Select name="action" defaultValue={action} className="w-48">
+        <Select name="action" defaultValue={action} className="w-full sm:w-48">
           <option value="">All actions</option>
           {ACTIONS.map((a) => (
             <option key={a} value={a}>

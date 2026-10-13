@@ -12,6 +12,7 @@
 import { Badge, Button, PageHeader, Table, TableHead, Td, Th } from '@eduplatform/ui';
 import { Star, Upload, UserPlus } from 'lucide-react';
 import Link from 'next/link';
+import { StudentCards } from '../../../components/student-cards';
 import { RowActions } from '../../../components/student-row-actions';
 import {
   filterQuery,
@@ -84,7 +85,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         }
       />
 
-      <div className="mb-4 flex gap-1 border-b">
+      <div className="mb-4 flex gap-1 overflow-x-auto border-b [&>*]:shrink-0">
         {(['current', 'outgoing'] as const).map((tab) => (
           <Link
             key={tab}
@@ -109,75 +110,89 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         sections={branchSections?.sections ?? []}
       />
 
-      <Table>
-        <TableHead>
-          <tr>
-            <Th>Adm. no</Th>
-            <Th>Name</Th>
-            <Th>Branch</Th>
-            <Th>{show === 'current' ? 'Section' : 'Last section'}</Th>
-            <Th>Status</Th>
-            <Th className="w-20 text-right">Actions</Th>
-          </tr>
-        </TableHead>
-        <tbody>
-          {result.items.map((s) => (
-            <tr key={s.id}>
-              <Td className="font-mono text-xs">{s.admissionNo}</Td>
-              <Td>
-                <Link
-                  href={`/students/${s.id}`}
-                  className="font-medium text-primary hover:underline"
-                >
-                  {s.fullName}
-                  {s.surname ? ` ${s.surname}` : ''}
-                </Link>
-                {s.topRanker && (
-                  <Star
-                    className="ml-1 inline size-3.5 fill-amber-400 text-amber-500"
-                    aria-label="Top ranker"
-                  />
-                )}
-              </Td>
-              <Td>{s.branch.name}</Td>
-              <Td>
-                {s.placement ? (
-                  <>
-                    {s.placement.section}
-                    <span className="ml-1 text-xs text-muted-foreground">
-                      {s.placement.academicYear.name}
-                      {s.placement.rollNo ? ` · #${s.placement.rollNo}` : ''}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-muted-foreground">Not placed</span>
-                )}
-              </Td>
-              <Td>
-                <Badge variant={s.status === 'ACTIVE' ? 'success' : 'outline'}>
-                  {STUDENT_STATUSES[s.status]}
-                </Badge>
-              </Td>
-              <Td className="text-right">
-                <RowActions
-                  id={s.id}
-                  canEdit={canAt(me, 'students.student.update', { branchId: s.branch.id })}
-                />
-              </Td>
-            </tr>
-          ))}
-          {result.items.length === 0 && (
+      <div className="md:hidden">
+        <StudentCards
+          students={result.items}
+          editable={
+            new Set(
+              result.items
+                .filter((s) => canAt(me, 'students.student.update', { branchId: s.branch.id }))
+                .map((s) => s.id),
+            )
+          }
+        />
+      </div>
+      <div className="hidden md:block">
+        <Table>
+          <TableHead>
             <tr>
-              <Td colSpan={6} className="py-8 text-center text-muted-foreground">
-                No students found.
-              </Td>
+              <Th>Adm. no</Th>
+              <Th>Name</Th>
+              <Th>Branch</Th>
+              <Th>{show === 'current' ? 'Section' : 'Last section'}</Th>
+              <Th>Status</Th>
+              <Th className="w-20 text-right">Actions</Th>
             </tr>
-          )}
-        </tbody>
-      </Table>
+          </TableHead>
+          <tbody>
+            {result.items.map((s) => (
+              <tr key={s.id}>
+                <Td className="font-mono text-xs">{s.admissionNo}</Td>
+                <Td>
+                  <Link
+                    href={`/students/${s.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {s.fullName}
+                    {s.surname ? ` ${s.surname}` : ''}
+                  </Link>
+                  {s.topRanker && (
+                    <Star
+                      className="ml-1 inline size-3.5 fill-amber-400 text-amber-500"
+                      aria-label="Top ranker"
+                    />
+                  )}
+                </Td>
+                <Td>{s.branch.name}</Td>
+                <Td>
+                  {s.placement ? (
+                    <>
+                      {s.placement.section}
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        {s.placement.academicYear.name}
+                        {s.placement.rollNo ? ` · #${s.placement.rollNo}` : ''}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">Not placed</span>
+                  )}
+                </Td>
+                <Td>
+                  <Badge variant={s.status === 'ACTIVE' ? 'success' : 'outline'}>
+                    {STUDENT_STATUSES[s.status]}
+                  </Badge>
+                </Td>
+                <Td className="text-right">
+                  <RowActions
+                    id={s.id}
+                    canEdit={canAt(me, 'students.student.update', { branchId: s.branch.id })}
+                  />
+                </Td>
+              </tr>
+            ))}
+            {result.items.length === 0 && (
+              <tr>
+                <Td colSpan={6} className="py-8 text-center text-muted-foreground">
+                  No students found.
+                </Td>
+              </tr>
+            )}
+          </tbody>
+        </Table>
+      </div>
 
       {pages > 1 && (
-        <div className="mt-4 flex items-center gap-2 text-sm">
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
           {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
             <Link
               key={n}

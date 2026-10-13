@@ -17,7 +17,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { cn } from '../lib/cn';
 
 const fieldStyles =
-  'flex h-9 w-full rounded-md border border-input bg-card px-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
+  'flex h-10 w-full min-w-0 rounded-md border border-input bg-card px-3 text-sm shadow-sm transition-[color,box-shadow,border-color] placeholder:text-muted-foreground hover:border-ring/50 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/15 disabled:cursor-not-allowed disabled:opacity-50 read-only:bg-muted/50 sm:h-9';
 
 export function Label({ className, ...props }: ComponentProps<'label'>) {
   return <label className={cn('text-sm font-medium leading-none', className)} {...props} />;
@@ -50,22 +50,40 @@ export function Select({ className, ...props }: ComponentProps<'select'>) {
   return <select className={cn(fieldStyles, 'pr-8', className)} {...props} />;
 }
 
-/** A label above a field, with an optional hint below it. */
+/**
+ * A label above a field, with an optional hint below it, and an optional icon inside the field
+ * on the left. Inside an ActionForm, the field's problem appears under it (data-field; the text
+ * comes from the browser's checks, see action-form.tsx and styles.css).
+ */
 export function Field({
   label,
   htmlFor,
   hint,
+  icon,
+  className,
   children,
 }: {
   label: string;
   htmlFor: string;
   hint?: string;
+  /** e.g. <Phone /> from lucide-react, shown inside the input on the left. */
+  icon?: ReactNode;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div data-field className={cn('ep-field flex min-w-0 flex-col gap-1.5', className)}>
       <Label htmlFor={htmlFor}>{label}</Label>
-      {children}
+      {icon ? (
+        <div className="relative [&_input]:pl-9 [&_select]:pl-9">
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground [&_svg]:size-4">
+            {icon}
+          </span>
+          {children}
+        </div>
+      ) : (
+        children
+      )}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );

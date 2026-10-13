@@ -50,9 +50,9 @@ export default async function UsersPage({
           name="search"
           defaultValue={search}
           placeholder="Search name or email"
-          className="max-w-xs"
+          className="w-full sm:max-w-xs"
         />
-        <Select name="status" defaultValue={status} className="w-40">
+        <Select name="status" defaultValue={status} className="w-full sm:w-40">
           <option value="">All statuses</option>
           <option value="ACTIVE">Active</option>
           <option value="INACTIVE">Inactive</option>
@@ -106,7 +106,7 @@ export default async function UsersPage({
       </Table>
 
       {pages > 1 && (
-        <div className="mt-4 flex items-center gap-2 text-sm">
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
           {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
             <Link
               key={n}

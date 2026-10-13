@@ -21,7 +21,10 @@ export function Alert({
   children: ReactNode;
 }) {
   return (
-    <div role="alert" className={cn('rounded-md border px-3 py-2 text-sm', styles[variant])}>
+    <div
+      role="alert"
+      className={cn('break-words rounded-md border px-3 py-2 text-sm', styles[variant])}
+    >
       {children}
     </div>
   );

@@ -44,7 +44,7 @@ export default async function PortalStudentPage({ params }: { params: Promise<{ 
             <CardTitle>Details</CardTitle>
           </CardHeader>
           <CardContent>
-            <dl className="grid grid-cols-2 gap-y-2 text-sm">
+            <dl className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-x-3 gap-y-2 break-words text-sm">
               <dt className="text-muted-foreground">Section</dt>
               <dd>{current?.section ?? '—'}</dd>
               <dt className="text-muted-foreground">Academic year</dt>

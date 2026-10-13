@@ -10,7 +10,7 @@ import { ActionForm, Badge, Field, Input, PageHeader } from '@eduplatform/ui';
 import Link from 'next/link';
 import { api } from '../../../../lib/api';
 import { canAt, getMe } from '../../../../lib/me';
-import type { Roster } from '../../../../lib/types';
+import type { OwnOrganization, Roster } from '../../../../lib/types';
 import { saveRegister } from '../actions';
 import { shiftDay, STATUS_LABEL, STATUSES } from '../labels';
 
@@ -19,8 +19,15 @@ export default async function MarkAttendancePage({
 }: {
   searchParams: Promise<{ classId?: string; date?: string }>;
 }) {
-  const { classId = '', date = '' } = await searchParams;
+  const params = await searchParams;
+  const classId = params.classId ?? '';
   const me = await getMe();
+  // No date in the link: today, in the organization's time zone (YYYY-MM-DD).
+  const date =
+    params.date ||
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: (await api<OwnOrganization>('/organization')).timeZone,
+    }).format(new Date());
   const roster = await api<Roster>(`/attendance/roster?${new URLSearchParams({ classId, date })}`);
   const place = { branchId: roster.section.branchId };
   const canMark = canAt(me, 'attendance.record.mark', place) && !roster.blocked;
@@ -135,7 +142,7 @@ function Register({ roster, editable }: { roster: Roster; editable: boolean }) {
                   <Input
                     name={`remark_${s.studentId}`}
                     defaultValue={s.remark ?? ''}
-                    className="w-48"
+                    className="w-full sm:w-48"
                     aria-label={`Remark for ${s.fullName}`}
                   />
                 ) : (

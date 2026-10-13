@@ -62,7 +62,13 @@ export default async function PromotePage({
 
       <form className="mb-6 flex flex-wrap items-end gap-3">
         <Field label="Branch" htmlFor="branchId">
-          <Select id="branchId" name="branchId" defaultValue={branchId} required className="w-56">
+          <Select
+            id="branchId"
+            name="branchId"
+            defaultValue={branchId}
+            required
+            className="w-full sm:w-56"
+          >
             {branches.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -76,7 +82,7 @@ export default async function PromotePage({
             name="fromYearId"
             defaultValue={fromYearId}
             required
-            className="w-52"
+            className="w-full sm:w-52"
           >
             {years.map((y) => (
               <option key={y.id} value={y.id}>
@@ -86,7 +92,13 @@ export default async function PromotePage({
           </Select>
         </Field>
         <Field label="To year" htmlFor="toYearId">
-          <Select id="toYearId" name="toYearId" defaultValue={toYearId} required className="w-52">
+          <Select
+            id="toYearId"
+            name="toYearId"
+            defaultValue={toYearId}
+            required
+            className="w-full sm:w-52"
+          >
             {years
               .filter((y) => y.status !== 'CLOSED')
               .map((y) => (
@@ -154,11 +166,11 @@ export default async function PromotePage({
                       </details>
                     </Td>
                     <Td>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Select
                           name={`to_${row.from.id}`}
                           defaultValue={suggested}
-                          className="w-72"
+                          className="w-full sm:w-72"
                           aria-label={`Where ${row.from.label} goes`}
                         >
                           {preview.sections.map((s) => (

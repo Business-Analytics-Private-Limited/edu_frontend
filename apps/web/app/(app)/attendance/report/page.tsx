@@ -62,7 +62,7 @@ export default async function AttendanceReportPage({
             name="classId"
             defaultValue={params.classId}
             required
-            className="w-80"
+            className="w-full sm:w-80"
           >
             {sections.map((s) => (
               <option key={s.id} value={s.id}>

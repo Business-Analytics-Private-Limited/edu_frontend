@@ -53,7 +53,7 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
             <CardTitle>Details</CardTitle>
           </CardHeader>
           <CardContent>
-            <dl className="grid grid-cols-2 gap-y-2 text-sm">
+            <dl className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-x-3 gap-y-2 break-words text-sm">
               <dt className="text-muted-foreground">Structure</dt>
               <dd>{org.levelNames.join(' › ')}</dd>
               <dt className="text-muted-foreground">Contact</dt>

@@ -101,7 +101,7 @@ export function AppShell({ brand, sections, headerEnd, children }: AppShellProps
             className="absolute inset-0 bg-black/40"
             onClick={() => setMenuOpen(false)}
           />
-          <aside className="absolute inset-y-0 left-0 w-64 bg-sidebar text-sidebar-foreground shadow-xl">
+          <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-sidebar text-sidebar-foreground shadow-xl">
             {sidebar}
           </aside>
         </div>
@@ -121,7 +121,7 @@ export function AppShell({ brand, sections, headerEnd, children }: AppShellProps
           <div className="text-sm font-medium md:hidden">{brand.name}</div>
           <div className="ml-auto flex items-center gap-2">{headerEnd}</div>
         </header>
-        <main className="flex-1 px-4 py-6 md:px-8">{children}</main>
+        <main className="w-full min-w-0 flex-1 px-4 py-5 sm:py-6 md:px-8">{children}</main>
       </div>
     </div>
   );

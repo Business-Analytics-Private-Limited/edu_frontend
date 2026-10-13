@@ -41,7 +41,7 @@ export default async function OrganizationPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <dl className="grid grid-cols-2 gap-y-2 text-sm">
+            <dl className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-x-3 gap-y-2 break-words text-sm">
               <dt className="text-muted-foreground">Type</dt>
               <dd>{ORGANIZATION_TYPES[org.type]}</dd>
               <dt className="text-muted-foreground">Code</dt>
@@ -86,7 +86,7 @@ export default async function OrganizationPage() {
                 </Field>
               </ActionForm>
             ) : (
-              <dl className="grid grid-cols-2 gap-y-2 text-sm">
+              <dl className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-x-3 gap-y-2 break-words text-sm">
                 <dt className="text-muted-foreground">Contact person</dt>
                 <dd>{org.contactName ?? '—'}</dd>
                 <dt className="text-muted-foreground">Email</dt>

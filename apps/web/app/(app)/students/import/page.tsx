@@ -159,7 +159,7 @@ export default async function ImportStudentsPage() {
               <CardTitle>Columns</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
+              <Table className="min-w-0">
                 <TableHead>
                   <tr>
                     <Th>Column</Th>

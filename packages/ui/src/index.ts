@@ -5,7 +5,12 @@
 export { cn } from './lib/cn';
 
 // Building blocks
-export { ActionForm, type ActionFormProps, type FormState } from './components/action-form';
+export {
+  ActionForm,
+  useActionFormPending,
+  type ActionFormProps,
+  type FormState,
+} from './components/action-form';
 export { Alert } from './components/alert';
 export {
   AlertHost,

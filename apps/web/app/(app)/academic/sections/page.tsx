@@ -86,7 +86,7 @@ export default async function SectionsPage({
       />
       <form className="mb-4 flex flex-wrap items-end gap-3">
         <Field label="Branch" htmlFor="branch">
-          <Select id="branch" name="branch" defaultValue={branch.id} className="w-56">
+          <Select id="branch" name="branch" defaultValue={branch.id} className="w-full sm:w-56">
             {branches.map((b) => (
               <option key={b.id} value={b.id}>
                 {branchName(b)}

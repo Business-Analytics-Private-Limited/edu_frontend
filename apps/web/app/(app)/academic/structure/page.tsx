@@ -97,7 +97,7 @@ export default async function StructurePage() {
             )}
             {years.map((year) => (
               <div key={year.id} className="flex flex-wrap items-end gap-2">
-                <span className="min-w-48 text-sm font-medium">{label(year)}</span>
+                <span className="sm:min-w-48 text-sm font-medium">{label(year)}</span>
                 {may.update && !year.longTerm ? (
                   <ActionForm
                     action={setNext.bind(null, year.id)}
@@ -110,7 +110,7 @@ export default async function StructurePage() {
                       name="nextClassId"
                       defaultValue={year.nextClassId ?? ''}
                       aria-label={`After ${year.name}`}
-                      className="w-56"
+                      className="w-full sm:w-56"
                     >
                       <option value="">Completes</option>
                       {years

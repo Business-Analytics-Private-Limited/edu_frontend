@@ -78,7 +78,7 @@ export default async function ImportHistoryPage({
         </tbody>
       </Table>
       {pages > 1 && (
-        <div className="mt-4 flex items-center gap-2 text-sm">
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
           {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
             <Link
               key={n}

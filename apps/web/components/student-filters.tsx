@@ -51,10 +51,10 @@ export function StudentFilters({
         name="search"
         defaultValue={filters.search}
         placeholder="Name, admission no or phone"
-        className="max-w-xs"
+        className="w-full sm:max-w-xs"
       />
       {branches.length > 1 && (
-        <Select name="branchId" defaultValue={filters.branchId ?? ''} className="w-44">
+        <Select name="branchId" defaultValue={filters.branchId ?? ''} className="w-full sm:w-44">
           <option value="">All branches</option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
@@ -64,7 +64,11 @@ export function StudentFilters({
         </Select>
       )}
       {years.length > 0 && (
-        <Select name="academicYearId" defaultValue={filters.academicYearId ?? ''} className="w-36">
+        <Select
+          name="academicYearId"
+          defaultValue={filters.academicYearId ?? ''}
+          className="w-full sm:w-36"
+        >
           <option value="">Any year</option>
           {years.map((y) => (
             <option key={y.id} value={y.id}>
@@ -74,7 +78,7 @@ export function StudentFilters({
         </Select>
       )}
       {classOptions.length > 0 && (
-        <Select name="classId" defaultValue={filters.classId ?? ''} className="w-72">
+        <Select name="classId" defaultValue={filters.classId ?? ''} className="w-full sm:w-72">
           <option value="">All {structure!.levels[0].toLowerCase()}s, groups and streams</option>
           {classOptions.map((c) => (
             <option key={c.id} value={c.id}>
@@ -84,7 +88,7 @@ export function StudentFilters({
         </Select>
       )}
       {sections.length > 0 && (
-        <Select name="sectionId" defaultValue={filters.sectionId ?? ''} className="w-72">
+        <Select name="sectionId" defaultValue={filters.sectionId ?? ''} className="w-full sm:w-72">
           <option value="">Every section of the branch</option>
           {sections.map((s) => (
             <option key={s.id} value={s.id}>

@@ -36,18 +36,22 @@ export default async function ImportRunPage({ params }: { params: Promise<{ id: 
         description={`${run.branchName} › ${run.section} · ${run.academicYearName} · by ${run.importedByName ?? '—'} on ${new Date(run.createdAt).toLocaleString()}${run.fileName ? ` · ${run.fileName}` : ''}`}
       />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-4">
         {[
-          ['Rows in the sheet', run.totalRows, 'outline'],
-          ['Imported', run.importedCount, 'success'],
-          ['Excluded', run.excludedCount, run.excludedCount ? 'warning' : 'outline'],
-        ].map(([label, value, variant]) => (
+          ['Rows in the sheet', run.totalRows, 'text-foreground'],
+          ['Imported', run.importedCount, 'text-success'],
+          [
+            'Excluded',
+            run.excludedCount,
+            run.excludedCount ? 'text-warning' : 'text-muted-foreground',
+          ],
+        ].map(([label, value, color]) => (
           <Card key={label as string}>
-            <CardContent className="flex items-center justify-between py-4">
-              <span className="text-sm text-muted-foreground">{label}</span>
-              <Badge variant={variant as 'outline' | 'success' | 'warning'} className="text-base">
+            <CardContent className="flex flex-col gap-1 p-3 pt-3 sm:p-5 sm:pt-5">
+              <span className="text-xs text-muted-foreground sm:text-sm">{label}</span>
+              <span className={`text-2xl font-semibold tabular-nums sm:text-3xl ${color}`}>
                 {value}
-              </Badge>
+              </span>
             </CardContent>
           </Card>
         ))}
@@ -67,7 +71,7 @@ export default async function ImportRunPage({ params }: { params: Promise<{ id: 
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
+            <Table className="min-w-0">
               <TableHead>
                 <tr>
                   <Th className="w-16">Row</Th>

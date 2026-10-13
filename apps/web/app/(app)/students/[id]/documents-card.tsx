@@ -102,7 +102,7 @@ export function DocumentsCard({
                     name="note"
                     placeholder="Why (e.g. blurred)"
                     required
-                    className="h-8 w-48"
+                    className="h-8 w-full sm:w-48"
                   />
                 </ActionForm>
               )}

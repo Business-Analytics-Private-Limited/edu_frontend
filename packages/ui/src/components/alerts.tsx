@@ -142,14 +142,17 @@ function AlertBox({
         aria-modal="true"
         aria-labelledby={`alert-${alert.id}-title`}
         aria-describedby={alert.text ? `alert-${alert.id}-text` : undefined}
-        className="ep-alert-box relative w-full max-w-sm overflow-hidden rounded-2xl bg-card px-6 pb-6 pt-8 text-center text-card-foreground shadow-2xl"
+        className="ep-alert-box relative w-full max-w-sm overflow-hidden rounded-2xl bg-card px-5 pb-5 pt-7 text-center text-card-foreground shadow-2xl sm:max-w-md sm:px-6 sm:pb-6 sm:pt-8"
       >
         <Icon icon={alert.icon} />
         <h2 id={`alert-${alert.id}-title`} className="mt-4 text-xl font-semibold">
           {alert.title}
         </h2>
         {alert.text && (
-          <p id={`alert-${alert.id}-text`} className="mt-2 text-sm text-muted-foreground">
+          <p
+            id={`alert-${alert.id}-text`}
+            className="mt-2 max-h-[50vh] overflow-y-auto whitespace-pre-line break-words text-sm text-muted-foreground"
+          >
             {alert.text}
           </p>
         )}
