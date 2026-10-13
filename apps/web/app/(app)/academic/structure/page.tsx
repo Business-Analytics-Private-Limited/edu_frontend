@@ -2,8 +2,9 @@
  * /academic/structure: the organization's academic structure above sections (ADR-0030), built
  * the way its type needs:
  *   School         tick the classes it runs (Nursery ... Class 10)
- *   Intermediate   switch groups on (MPC, BiPC, CEC, HEC; each gets "Regular (IPE)"), add the
- *                  college's own streams (JEE Mains, NEET ...; long-term ones go under Long Term)
+ *   Intermediate   switch groups on (MPC, BiPC, CEC, HEC; each gets "Regular (IPE)"), choose
+ *                  which groups each BRANCH runs (ADR-0032; a Branch admin for their branch), add
+ *                  the college's own streams (JEE Mains, NEET ...; long-term ones under Long Term)
  *   Degree / Eng.  add courses (B.Tech) and specializations (CSE) with their number of years
  * Also: the level names (renameable), where students go after each year (promotion), and the
  * whole tree with each class's subjects. Sections are added per branch on /academic/sections.
@@ -28,14 +29,15 @@ import {
 import Link from 'next/link';
 import { api } from '../../../../lib/api';
 import { ORGANIZATION_TYPES } from '../../../../lib/labels';
-import { canAt, getMe } from '../../../../lib/me';
-import type { ClassItem, Me, Structure } from '../../../../lib/types';
+import { can, canAt, getMe } from '../../../../lib/me';
+import type { Branch, ClassItem, Me, Structure } from '../../../../lib/types';
 import {
   addCourse,
   addSpecialization,
   addStream,
   deleteClass,
   deleteStream,
+  setBranchGroups,
   setGroups,
   setLevelNames,
   setNext,
@@ -48,6 +50,10 @@ const byOrder = (a: ClassItem, b: ClassItem) =>
 
 export default async function StructurePage() {
   const [me, structure] = await Promise.all([getMe(), api<Structure>('/academic-structure')]);
+  const branches =
+    structure.type === 'INTERMEDIATE' && can(me, 'platform.branch.view')
+      ? await api<Branch[]>('/branches')
+      : [];
   const whole = {};
   const may = {
     create: canAt(me, 'academic.structure.create', whole),
@@ -78,7 +84,9 @@ export default async function StructurePage() {
         {structure.type === 'SCHOOL' && (
           <SchoolClasses structure={structure} canEdit={may.update} />
         )}
-        {structure.type === 'INTERMEDIATE' && <IntermediateSetup structure={structure} may={may} />}
+        {structure.type === 'INTERMEDIATE' && (
+          <IntermediateSetup structure={structure} may={may} branches={branches} me={me} />
+        )}
         {(structure.type === 'DEGREE' || structure.type === 'ENGINEERING') && (
           <Courses structure={structure} may={may} childrenOf={childrenOf} />
         )}
@@ -212,9 +220,13 @@ function SchoolClasses({ structure, canEdit }: { structure: Structure; canEdit: 
 function IntermediateSetup({
   structure,
   may,
+  branches,
+  me,
 }: {
   structure: Structure;
   may: { create: boolean; update: boolean; delete: boolean };
+  branches: Branch[];
+  me: Me;
 }) {
   const enabledGroups = structure.builtIn.filter((g) => g.enabled);
   // Streams by group: one row per stream code (it appears under Junior and Senior, or Long Term).
@@ -251,6 +263,10 @@ function IntermediateSetup({
           </ActionForm>
         </CardContent>
       </Card>
+
+      {enabledGroups.length > 0 && branches.length > 0 && (
+        <BranchGroups structure={structure} branches={branches} me={me} />
+      )}
 
       <Card>
         <CardHeader>
@@ -456,5 +472,107 @@ function Tree({
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Which of the organization's groups each branch runs (ADR-0032): a row per branch, a column
+ * per group. Sections at a branch can only be made under the groups ticked for it. Rows of
+ * branches the user may not change (or that are closed) are read-only.
+ */
+function BranchGroups({
+  structure,
+  branches,
+  me,
+}: {
+  structure: Structure;
+  branches: Branch[];
+  me: Me;
+}) {
+  const groups = structure.builtIn.filter((g) => g.enabled);
+  const editable = (b: Branch) =>
+    b.status === 'ACTIVE' && canAt(me, 'academic.structure.update', { branchId: b.id });
+  const anyEditable = branches.some(editable);
+  return (
+    <Card className="lg:col-span-2">
+      <CardHeader>
+        <CardTitle>Groups at each branch</CardTitle>
+        <CardDescription>
+          Tick the groups each branch runs. A branch&apos;s sections, admissions and imports only
+          offer its own groups. A group can&apos;t be unticked while the branch has sections under
+          it.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ActionForm action={setBranchGroups} submitLabel="Save groups at branches">
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-sm">
+              <thead className="border-b bg-muted/60">
+                <tr>
+                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground sm:px-4">
+                    Branch
+                  </th>
+                  {groups.map((g) => (
+                    <th
+                      key={g.code}
+                      className="px-3 py-2.5 text-center text-xs font-semibold text-muted-foreground"
+                    >
+                      {g.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {branches.map((b) => {
+                  const runs = structure.branchGroups[b.id] ?? [];
+                  const canEdit = editable(b);
+                  return (
+                    <tr key={b.id} className="border-b last:border-0">
+                      <td className="px-3 py-2.5 font-medium sm:px-4">
+                        {b.name}
+                        {b.status !== 'ACTIVE' && (
+                          <Badge variant="outline" className="ml-2">
+                            Closed
+                          </Badge>
+                        )}
+                        {canEdit && (
+                          <>
+                            <input type="hidden" name="branch" value={b.id} />
+                            <input type="hidden" name={`name-${b.id}`} value={b.name} />
+                            <input
+                              type="hidden"
+                              name={`was-${b.id}`}
+                              value={[...runs].sort().join(',')}
+                            />
+                          </>
+                        )}
+                      </td>
+                      {groups.map((g) => (
+                        <td key={g.code} className="px-3 py-2.5 text-center">
+                          <input
+                            type="checkbox"
+                            name={`g-${b.id}`}
+                            value={g.code}
+                            defaultChecked={runs.includes(g.code)}
+                            disabled={!canEdit}
+                            aria-label={`${b.name}: ${g.name}`}
+                            className="size-4 accent-[var(--primary)]"
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {!anyEditable && (
+            <p className="text-xs text-muted-foreground">
+              Your roles don&apos;t allow changing the groups of these branches.
+            </p>
+          )}
+        </ActionForm>
+      </CardContent>
+    </Card>
   );
 }

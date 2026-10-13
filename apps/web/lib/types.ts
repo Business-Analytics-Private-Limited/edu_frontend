@@ -186,6 +186,8 @@ export interface Structure {
   classes: ClassItem[];
   /** School: the classes to tick; Intermediate: the groups to switch on. */
   builtIn: { code: string; name: string; enabled: boolean }[];
+  /** Intermediate: the groups each branch runs, { branchId: ["MPC", "BIPC"] } (ADR-0032). */
+  branchGroups: Record<string, string[]>;
 }
 
 /** A section with its place in the structure, e.g. path "Junior (1st Year) › MPC › JEE Mains". */

@@ -98,6 +98,32 @@ export async function setGroups(_previous: FormState, form: FormData): Promise<F
   );
 }
 
+/**
+ * "Groups at each branch" (ADR-0032): one checkbox per branch and group, named "g-<branchId>";
+ * "branch" lists the branches the user may change, "was-<branchId>" what they ran before.
+ * Only changed branches are saved; each one's problem is reported with its name.
+ */
+export async function setBranchGroups(_previous: FormState, form: FormData): Promise<FormState> {
+  const errors: string[] = [];
+  let saved = 0;
+  for (const id of form.getAll('branch').map(String)) {
+    const codes = form.getAll(`g-${id}`).map(String).sort();
+    if (codes.join(',') === text(form, `was-${id}`)) continue;
+    try {
+      await api(`/branches/${id}/groups`, { method: 'PUT', body: { codes } });
+      saved++;
+    } catch (error) {
+      errors.push(`${text(form, `name-${id}`)}: ${errorMessage(error)}`);
+    }
+  }
+  revalidatePath(STRUCTURE);
+  revalidatePath('/academic/sections');
+  if (errors.length > 0) {
+    return { error: `${saved ? `Saved ${saved} branch(es). ` : ''}${errors.join(' · ')}` };
+  }
+  return { success: saved ? `Saved the groups of ${saved} branch(es)` : 'Nothing changed' };
+}
+
 export async function addStream(_previous: FormState, form: FormData): Promise<FormState> {
   return run(
     STRUCTURE,

@@ -3,6 +3,8 @@
  * A section sits under a class of the level just above it (a stream, a class, a year of a
  * course), e.g. "Junior › MPC › JEE Mains" > JEE-A. Each branch builds its own sections;
  * a Branch admin does it for their branch ("academic.structure.*" at the branch).
+ * Intermediate: only under the groups the branch runs (Structure → Groups at each branch,
+ * ADR-0032).
  */
 import {
   ActionForm,
@@ -70,8 +72,17 @@ export default async function SectionsPage({
     const parent = c.parentId ? byId.get(c.parentId) : undefined;
     return parent ? `${label(parent)} › ${c.name}` : c.name;
   };
+  // Intermediate: only under the groups this branch runs (ADR-0032).
+  const intermediate = structure.type === 'INTERMEDIATE';
+  const branchRuns = structure.branchGroups[branch.id] ?? [];
+  const groupCode = (c: ClassItem): string | undefined =>
+    c.level === 2 ? c.code : c.parentId ? groupCode(byId.get(c.parentId)!) : undefined;
+  const groupNames = structure.builtIn
+    .filter((g) => branchRuns.includes(g.code))
+    .map((g) => g.name);
   const parents = structure.classes
     .filter((c) => c.level === structure.sectionLevel - 1 && c.isActive)
+    .filter((c) => !intermediate || branchRuns.includes(groupCode(c) ?? ''))
     .map((c) => ({ id: c.id, label: label(c) }))
     .sort((a, b) => a.label.localeCompare(b.label));
   const path = `/academic/sections?branch=${branch.id}`;
@@ -180,31 +191,45 @@ export default async function SectionsPage({
                   first.
                 </p>
               ) : (
-                <ActionForm
-                  action={createSection.bind(null, branch.id)}
-                  submitLabel={`Add ${sectionLevelName.toLowerCase()}`}
-                  resetOnSuccess
-                >
-                  <Field label="Under" htmlFor="parentId">
-                    <Select id="parentId" name="parentId" required>
-                      {parents.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  <Field label="Name" htmlFor="name">
-                    <Input id="name" name="name" required placeholder="JEE-A" />
-                  </Field>
-                  <Field
-                    label="Code"
-                    htmlFor="code"
-                    hint="Same code next year (e.g. A) = promotion finds it by itself"
+                <>
+                  {intermediate && (
+                    <p className="mb-4 text-xs text-muted-foreground">
+                      {branch.name} runs{' '}
+                      <span className="font-medium text-foreground">
+                        {groupNames.length ? groupNames.join(', ') : 'no group yet'}
+                      </span>
+                      .{' '}
+                      <Link href="/academic/structure" className="text-primary hover:underline">
+                        Change in Groups at each branch
+                      </Link>
+                    </p>
+                  )}
+                  <ActionForm
+                    action={createSection.bind(null, branch.id)}
+                    submitLabel={`Add ${sectionLevelName.toLowerCase()}`}
+                    resetOnSuccess
                   >
-                    <Input id="code" name="code" required placeholder="A" maxLength={20} />
-                  </Field>
-                </ActionForm>
+                    <Field label="Under" htmlFor="parentId">
+                      <Select id="parentId" name="parentId" required>
+                        {parents.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                    <Field label="Name" htmlFor="name">
+                      <Input id="name" name="name" required placeholder="JEE-A" />
+                    </Field>
+                    <Field
+                      label="Code"
+                      htmlFor="code"
+                      hint="Same code next year (e.g. A) = promotion finds it by itself"
+                    >
+                      <Input id="code" name="code" required placeholder="A" maxLength={20} />
+                    </Field>
+                  </ActionForm>
+                </>
               )}
             </CardContent>
           </Card>
