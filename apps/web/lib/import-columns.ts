@@ -91,3 +91,43 @@ export const IMPORT_COLUMNS: ImportColumn[] = [
 export function importColumnsFor(numbering: 'AUTOMATIC' | 'MANUAL'): ImportColumn[] {
   return IMPORT_COLUMNS.filter((c) => !c.manualOnly || numbering === 'MANUAL');
 }
+
+/** The columns in groups, for the import page's column guide (same order as the template). */
+const COLUMN_GROUPS: [string, string[]][] = [
+  ['Admission', ['admissionNo', 'admissionDate', 'rollNo']],
+  ['Student', ['fullName', 'surname', 'dateOfBirth', 'gender', 'bloodGroup']],
+  ['Contact', ['phone', 'alternatePhone', 'email', 'address', 'permanentAddress', 'area']],
+  ['Identity and category (sensitive)', ['aadhaar', 'category', 'subCaste']],
+  ['Stay and transport', ['residence', 'busFacility', 'pickupPoint']],
+  [
+    'Previous education',
+    ['previousInstitution', 'previousBoard', 'hallTicketNo', 'previousPercentage', 'previousGrade'],
+  ],
+  ['Admission test', ['admissionTestNo', 'admissionTestMarks']],
+  ['Health, notes and ranking', ['medicalCondition', 'remarks', 'topRanker', 'learnerLevel']],
+  [
+    'Parents',
+    [
+      'fatherName',
+      'fatherPhone',
+      'fatherOccupation',
+      'motherName',
+      'motherPhone',
+      'motherOccupation',
+      'guardianName',
+      'guardianPhone',
+      'guardianOccupation',
+    ],
+  ],
+];
+
+/** `columns` (e.g. from importColumnsFor) in their groups; empty groups are left out. */
+export function groupedColumns(
+  columns: ImportColumn[],
+): { title: string; columns: ImportColumn[] }[] {
+  const byName = new Map(columns.map((c) => [c.name, c]));
+  return COLUMN_GROUPS.map(([title, names]) => ({
+    title,
+    columns: names.map((n) => byName.get(n)).filter((c): c is ImportColumn => !!c),
+  })).filter((g) => g.columns.length > 0);
+}

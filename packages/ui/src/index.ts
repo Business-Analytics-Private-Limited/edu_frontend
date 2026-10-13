@@ -12,6 +12,7 @@ export {
   type FormState,
 } from './components/action-form';
 export { Alert } from './components/alert';
+export { Drawer, type DrawerProps } from './components/drawer';
 export {
   AlertHost,
   confirmDialog,

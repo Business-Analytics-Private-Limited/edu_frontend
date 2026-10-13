@@ -23,16 +23,13 @@ import {
   FileInput,
   PageHeader,
   Select,
-  Table,
-  TableHead,
-  Td,
-  Th,
 } from '@eduplatform/ui';
 import { Upload } from 'lucide-react';
 import Link from 'next/link';
 import { SectionPicker } from '../../../../components/section-picker';
 import { api } from '../../../../lib/api';
-import { importColumnsFor } from '../../../../lib/import-columns';
+import { ImportColumnGuide } from '../../../../components/import-column-guide';
+import { groupedColumns, importColumnsFor } from '../../../../lib/import-columns';
 import { can, canAt, getMe } from '../../../../lib/me';
 import { branchesForWork } from '../../../../lib/places';
 import { pickerData } from '../../../../lib/structure';
@@ -157,30 +154,12 @@ export default async function ImportStudentsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Columns</CardTitle>
+              <CardDescription>
+                One student per row. Where they go is chosen on the left, not in the sheet.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table className="min-w-0">
-                <TableHead>
-                  <tr>
-                    <Th>Column</Th>
-                    <Th>What to write</Th>
-                  </tr>
-                </TableHead>
-                <tbody>
-                  {columns.map((c) => (
-                    <tr key={c.name}>
-                      <Td className="font-mono text-xs">
-                        {c.name}
-                        {c.required ? ' *' : ''}
-                      </Td>
-                      <Td className="text-muted-foreground">{c.help}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-              <p className="mt-2 text-xs text-muted-foreground">
-                * required; every other column may be left empty or left out.
-              </p>
+              <ImportColumnGuide groups={groupedColumns(columns)} />
             </CardContent>
           </Card>
         </div>

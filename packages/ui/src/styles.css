@@ -215,3 +215,18 @@
     animation: none;
   }
 }
+
+/* The Drawer (components/drawer.tsx) slides in from the right. */
+@keyframes ep-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+.ep-drawer[open] {
+  animation: ep-drawer-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ep-drawer[open] {
+    animation: none;
+  }
+}
