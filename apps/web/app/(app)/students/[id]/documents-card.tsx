@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
   Field,
+  FileInput,
   Input,
   Select,
 } from '@eduplatform/ui';
@@ -140,13 +141,11 @@ export function DocumentsCard({
                 </Select>
               </Field>
               <Field label="File" htmlFor="file" hint="PDF, JPG or PNG, up to 5 MB">
-                <input
+                <FileInput
                   id="file"
                   name="file"
-                  type="file"
                   accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
                   required
-                  className="text-sm"
                 />
               </Field>
             </ActionForm>

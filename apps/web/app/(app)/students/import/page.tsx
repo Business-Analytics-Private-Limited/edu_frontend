@@ -4,8 +4,9 @@
  *   1. choose the branch, the academic year, then the structure level by level (e.g. Junior ›
  *      MPC › JEE Mains), then the section;
  *   2. download the template, fill it in (one student per row; only the students' own columns);
- *   3. "Only check" first: every row is checked and problems are listed by row number;
- *   4. untick "Only check" and import: all rows are saved, or none.
+ *   3. "Check the file" first: every row is checked and problems are listed by row number,
+ *      nothing is saved;
+ *   4. "Import students": checked again, then all rows are saved, or none.
  * Admission numbers: a column only when the organization types them; automatic otherwise.
  * Needs "students.student.import" at the branch.
  */
@@ -15,9 +16,9 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  Checkbox,
   EmptyState,
   Field,
+  FileInput,
   PageHeader,
   Select,
   Table,
@@ -84,7 +85,7 @@ export default async function ImportStudentsPage() {
       <PageHeader
         back={{ href: '/students', label: 'Back to students' }}
         title="Import students"
-        description="Into one section at a time. Check first; then import all rows, or none."
+        description="Into one section at a time. Check the file first; then import all rows, or none."
         actions={
           <a
             href="/students/import/template"
@@ -100,7 +101,15 @@ export default async function ImportStudentsPage() {
             <CardTitle>Where, and the file</CardTitle>
           </CardHeader>
           <CardContent>
-            <ActionForm action={importStudents} submitLabel="Go" pendingLabel="Working…">
+            <ActionForm
+              action={importStudents}
+              submitLabel="Check the file"
+              submitName="intent"
+              submitValue="check"
+              submitVariant="outline"
+              secondary={{ label: 'Import students', name: 'intent', value: 'import' }}
+              pendingLabel="Working…"
+            >
               <SectionPicker
                 {...picker}
                 branches={branches}
@@ -125,21 +134,12 @@ export default async function ImportStudentsPage() {
                 }
               />
               <Field label="CSV file" htmlFor="file" hint="Up to 2000 students per file">
-                <input
-                  id="file"
-                  name="file"
-                  type="file"
-                  accept=".csv,text/csv"
-                  required
-                  className="text-sm"
-                />
+                <FileInput id="file" name="file" accept=".csv,text/csv" required />
               </Field>
-              <Checkbox
-                name="dryRun"
-                defaultChecked
-                label="Only check (save nothing)"
-                description="Untick to import once the check shows no problems"
-              />
+              <p className="text-xs text-muted-foreground">
+                <strong>Check the file</strong> saves nothing and lists any problems by row.{' '}
+                <strong>Import students</strong> checks again and saves every row, or none.
+              </p>
             </ActionForm>
           </CardContent>
         </Card>

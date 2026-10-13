@@ -10,6 +10,8 @@
  *   - disables the button while saving
  *   - keeps what the user typed when there is an error
  *   - optionally asks "Are you sure?" first, and optionally empties itself after success
+ *   - optionally a `secondary` button: the action reads which button was clicked, e.g.
+ *     form.get('intent') === 'import' (the import page: "Check the file" / "Import students")
  *
  *   <ActionForm action={createInstitution} submitLabel="Add institution" resetOnSuccess>
  *     <Field label="Name" htmlFor="name"><Input id="name" name="name" required /></Field>
@@ -23,6 +25,7 @@ import {
   useActionState,
   useEffect,
   useRef,
+  useState,
   type FormEvent,
   type ReactNode,
 } from 'react';
@@ -47,6 +50,12 @@ export interface ActionFormProps {
   resetOnSuccess?: boolean;
   submitVariant?: ButtonProps['variant'];
   submitSize?: ButtonProps['size'];
+  /** Sent with the form when the main button is clicked, e.g. name "intent", value "check". */
+  submitName?: string;
+  submitValue?: string;
+  /** A second button for the same form, e.g. "Import students" next to "Check the file".
+   *  The action sees which one was clicked by its `name` and `value`. */
+  secondary?: { label: string; name: string; value: string; variant?: ButtonProps['variant'] };
   className?: string;
   children?: ReactNode;
 }
@@ -59,11 +68,16 @@ export function ActionForm({
   resetOnSuccess = false,
   submitVariant,
   submitSize,
+  submitName,
+  submitValue,
+  secondary,
   className,
   children,
 }: ActionFormProps) {
   const [state, formAction, pending] = useActionState(action, {});
   const formRef = useRef<HTMLFormElement>(null);
+  // Which button sent the form, so only that one says "Saving…".
+  const [clicked, setClicked] = useState<'main' | 'secondary'>('main');
 
   useEffect(() => {
     // Every result also pops up in the corner, so it is seen even when the form is off screen.
@@ -76,11 +90,15 @@ export function ActionForm({
   // empty every field after each send, also when the server said "error".
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const fields = new FormData(event.currentTarget); // read now: the event is gone after await
+    // Read now (the event is gone after await), with the clicked button's name and value.
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    const fields = new FormData(event.currentTarget, submitter);
+    const isSecondary = Boolean(secondary && submitter?.dataset.secondary);
+    setClicked(isSecondary ? 'secondary' : 'main');
     if (confirmMessage) {
       const confirmed = await confirmDialog({
         text: confirmMessage,
-        confirmText: submitLabel,
+        confirmText: isSecondary && secondary ? secondary.label : submitLabel,
         danger: submitVariant === 'destructive',
       });
       if (!confirmed) return;
@@ -93,10 +111,30 @@ export function ActionForm({
       {state.error && <Alert variant="error">{state.error}</Alert>}
       {state.success && <Alert variant="success">{state.success}</Alert>}
       {children}
-      <div>
-        <Button type="submit" variant={submitVariant} size={submitSize} disabled={pending}>
-          {pending ? pendingLabel : submitLabel}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="submit"
+          name={submitName}
+          value={submitValue}
+          variant={submitVariant}
+          size={submitSize}
+          disabled={pending}
+        >
+          {pending && clicked === 'main' ? pendingLabel : submitLabel}
         </Button>
+        {secondary && (
+          <Button
+            type="submit"
+            name={secondary.name}
+            value={secondary.value}
+            data-secondary="1"
+            variant={secondary.variant}
+            size={submitSize}
+            disabled={pending}
+          >
+            {pending && clicked === 'secondary' ? pendingLabel : secondary.label}
+          </Button>
+        )}
       </div>
     </form>
   );

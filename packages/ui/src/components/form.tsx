@@ -10,6 +10,8 @@
  *   </Select>
  *
  *   <Checkbox name="permissions" value="access.user.view" label="See users" />
+ *
+ *   <FileInput id="file" name="file" accept=".csv" />
  */
 import type { ComponentProps, ReactNode } from 'react';
 import { cn } from '../lib/cn';
@@ -23,6 +25,25 @@ export function Label({ className, ...props }: ComponentProps<'label'>) {
 
 export function Input({ className, ...props }: ComponentProps<'input'>) {
   return <input className={cn(fieldStyles, className)} {...props} />;
+}
+
+/**
+ * A file field that looks like the other fields, with a "Choose file" button inside:
+ *   <FileInput id="file" name="file" accept=".csv" required />
+ */
+export function FileInput({ className, ...props }: Omit<ComponentProps<'input'>, 'type'>) {
+  return (
+    <input
+      type="file"
+      className={cn(
+        fieldStyles,
+        'h-10 cursor-pointer items-center py-1 pl-1 text-muted-foreground',
+        'file:mr-3 file:h-8 file:cursor-pointer file:rounded file:border-0 file:bg-primary file:px-3 file:text-sm file:font-medium file:text-primary-foreground hover:file:opacity-90',
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function Select({ className, ...props }: ComponentProps<'select'>) {

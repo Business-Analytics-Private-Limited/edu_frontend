@@ -314,7 +314,8 @@ export async function importStudents(_previous: FormState, form: FormData): Prom
   const rows = parseCsv(await file.text(), IMPORT_COLUMNS);
   if (rows.length === 0) return { error: 'The file has no rows under its header' };
   if (rows.length > 2000) return { error: 'At most 2000 students per file; split the file' };
-  const dryRun = form.get('dryRun') === 'on';
+  // Two buttons: "Check the file" (intent=check) saves nothing; "Import students" saves.
+  const dryRun = form.get('intent') !== 'import';
 
   let result: {
     ok: boolean;
@@ -345,11 +346,11 @@ export async function importStudents(_previous: FormState, form: FormData): Prom
   }
   if (dryRun) {
     return {
-      success: `Checked ${result.total} row(s): no problems. Untick "Only check" to import.`,
+      success: `Checked ${result.total} row(s): no problems, nothing saved yet. Click "Import students" to save them.`,
     };
   }
   revalidatePath('/students');
-  return { success: `Imported ${result.imported} student(s).` };
+  return { success: `Imported ${result.imported} student(s). They are in Students → Current.` };
 }
 
 /** AUTOMATIC (with a pattern) or MANUAL admission numbers for the whole organization. */
