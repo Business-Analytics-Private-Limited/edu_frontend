@@ -1,9 +1,10 @@
 /**
- * /students/new: admit a student (ADR-0030). Required: branch, admission date, name, date of
- * birth and gender; the admission number too when the organization types them (MANUAL).
- * The section is chosen step by step (branch → year → group → stream → section) and is optional;
- * a student can join straight into a later year (lateral entry: previous school and marks).
- * Only branches where you may admit students are offered; the API checks everything again.
+ * /students/new: add (admit) one student (ADR-0030, ADR-0031). Required: branch, admission date,
+ * full name, date of birth and gender; the admission number too when the organization types them
+ * (MANUAL). The section is chosen step by step (branch → year → group → stream → section) and is
+ * optional; a student can join straight into a later year (lateral entry: previous education).
+ * Every other detail is optional (components/student-fields.tsx), and father, mother and guardian
+ * can be added. The browser checks each field; the API checks everything again.
  */
 import {
   ActionForm,
@@ -19,13 +20,23 @@ import {
 } from '@eduplatform/ui';
 import { UserPlus } from 'lucide-react';
 import { SectionPicker } from '../../../../components/section-picker';
+import { StudentFields } from '../../../../components/student-fields';
 import { api } from '../../../../lib/api';
 import { can, getMe } from '../../../../lib/me';
 import { branchesForWork } from '../../../../lib/places';
 import { pickerData } from '../../../../lib/structure';
 import type { AcademicYear, Branch, OwnOrganization } from '../../../../lib/types';
+import {
+  ADMISSION_NO_PATTERN,
+  ADMISSION_NO_TITLE,
+  NAME_PATTERN,
+  NAME_TITLE,
+  PHONE_PATTERN,
+  PHONE_TITLE,
+} from '../../../../lib/student-rules';
 import { admitStudent } from '../actions';
-import { GENDERS, RELATIONS } from '../labels';
+
+const PARENT_LABELS = { father: 'Father', mother: 'Mother', guardian: 'Guardian' } as const;
 
 export default async function AdmitStudentPage() {
   const me = await getMe();
@@ -37,7 +48,7 @@ export default async function AdmitStudentPage() {
   if (branches.length === 0) {
     return (
       <>
-        <PageHeader back={{ href: '/students', label: 'Back to students' }} title="Admit student" />
+        <PageHeader back={{ href: '/students', label: 'Back to students' }} title="Add student" />
         <EmptyState
           icon={<UserPlus />}
           title="No branch to admit to"
@@ -61,13 +72,13 @@ export default async function AdmitStudentPage() {
     <>
       <PageHeader
         back={{ href: '/students', label: 'Back to students' }}
-        title="Admit student"
-        description="Fields marked * are required."
+        title="Add student"
+        description="Fields marked * are required; everything else can be filled in later."
       />
       <ActionForm
         action={admitStudent}
-        submitLabel="Admit student"
-        pendingLabel="Admitting…"
+        submitLabel="Add student"
+        pendingLabel="Adding…"
         className="max-w-3xl gap-6"
       >
         <Card>
@@ -77,7 +88,15 @@ export default async function AdmitStudentPage() {
           <CardContent className="grid gap-4 sm:grid-cols-2">
             {manual ? (
               <Field label="Admission no *" htmlFor="admissionNo">
-                <Input id="admissionNo" name="admissionNo" required placeholder="SVJC260001" />
+                <Input
+                  id="admissionNo"
+                  name="admissionNo"
+                  required
+                  maxLength={30}
+                  pattern={ADMISSION_NO_PATTERN}
+                  title={ADMISSION_NO_TITLE}
+                  placeholder="SVJC260001"
+                />
               </Field>
             ) : (
               <Field label="Admission no" htmlFor="admissionNo-auto">
@@ -89,7 +108,13 @@ export default async function AdmitStudentPage() {
               </Field>
             )}
             <Field label="Admission date *" htmlFor="admissionDate">
-              <Input id="admissionDate" name="admissionDate" type="date" required />
+              <Input
+                id="admissionDate"
+                name="admissionDate"
+                type="date"
+                required
+                defaultValue={new Date().toISOString().slice(0, 10)}
+              />
             </Field>
           </CardContent>
         </Card>
@@ -128,7 +153,7 @@ export default async function AdmitStudentPage() {
                     </Select>
                   </Field>
                   <Field label="Roll no" htmlFor="rollNo">
-                    <Input id="rollNo" name="rollNo" />
+                    <Input id="rollNo" name="rollNo" maxLength={20} />
                   </Field>
                 </div>
               </>
@@ -148,75 +173,52 @@ export default async function AdmitStudentPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Student</CardTitle>
+            <CardTitle>Student details</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <Field label="Full name *" htmlFor="fullName" hint="As in official records">
-              <Input id="fullName" name="fullName" required minLength={2} />
-            </Field>
-            <Field label="Surname" htmlFor="surname">
-              <Input id="surname" name="surname" />
-            </Field>
-            <Field label="Date of birth *" htmlFor="dateOfBirth">
-              <Input id="dateOfBirth" name="dateOfBirth" type="date" required />
-            </Field>
-            <Field label="Gender *" htmlFor="gender">
-              <Select id="gender" name="gender" required>
-                {Object.entries(GENDERS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Phone" htmlFor="phone">
-              <Input id="phone" name="phone" />
-            </Field>
-            <Field label="Email" htmlFor="email">
-              <Input id="email" name="email" type="email" />
-            </Field>
-            <div className="sm:col-span-2">
-              <Field label="Address" htmlFor="address">
-                <Input id="address" name="address" />
-              </Field>
-            </div>
+          <CardContent>
+            <StudentFields showSensitive />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Joining in a later year (optional)</CardTitle>
+            <CardTitle>Parents / guardians (optional)</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <Field label="Previous school / college" htmlFor="previousInstitution">
-              <Input id="previousInstitution" name="previousInstitution" />
-            </Field>
-            <Field label="Previous marks" htmlFor="previousMarks" hint="e.g. 1st year: 845/1000">
-              <Input id="previousMarks" name="previousMarks" />
-            </Field>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Parent / guardian (optional)</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-3">
-            <Field label="Name" htmlFor="guardianName">
-              <Input id="guardianName" name="guardianName" />
-            </Field>
-            <Field label="Relation" htmlFor="guardianRelation">
-              <Select id="guardianRelation" name="guardianRelation">
-                {Object.entries(RELATIONS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Phone" htmlFor="guardianPhone">
-              <Input id="guardianPhone" name="guardianPhone" />
-            </Field>
+          <CardContent className="flex flex-col gap-4">
+            {(['father', 'mother', 'guardian'] as const).map((who) => (
+              <div key={who} className="grid gap-3 sm:grid-cols-3">
+                <Field label={`${PARENT_LABELS[who]}: name`} htmlFor={`${who}Name`}>
+                  <Input
+                    id={`${who}Name`}
+                    name={`${who}Name`}
+                    minLength={2}
+                    maxLength={100}
+                    pattern={NAME_PATTERN}
+                    title={NAME_TITLE}
+                  />
+                </Field>
+                <Field label="Phone" htmlFor={`${who}Phone`}>
+                  <Input
+                    id={`${who}Phone`}
+                    name={`${who}Phone`}
+                    type="tel"
+                    pattern={PHONE_PATTERN}
+                    title={PHONE_TITLE}
+                  />
+                </Field>
+                <Field label="Occupation" htmlFor={`${who}Occupation`}>
+                  <Input
+                    id={`${who}Occupation`}
+                    name={`${who}Occupation`}
+                    minLength={2}
+                    maxLength={50}
+                  />
+                </Field>
+              </div>
+            ))}
+            <p className="text-xs text-muted-foreground">
+              The first one filled in is the main contact. Phone and occupation need a name.
+            </p>
           </CardContent>
         </Card>
       </ActionForm>

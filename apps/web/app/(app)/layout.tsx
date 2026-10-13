@@ -23,6 +23,7 @@ import {
   Network,
   Settings,
   ShieldCheck,
+  Star,
   Upload,
   UserPlus,
   Users,
@@ -61,9 +62,15 @@ const STUDENTS_MENU: (NavItem & { permission: string })[] = [
   },
   {
     href: '/students/new',
-    label: 'Admit student',
+    label: 'Add student',
     icon: <UserPlus />,
     permission: 'students.student.create',
+  },
+  {
+    href: '/students/top-rankers',
+    label: 'Top rankers',
+    icon: <Star />,
+    permission: 'students.student.view',
   },
   {
     href: '/students/promote',
@@ -75,6 +82,12 @@ const STUDENTS_MENU: (NavItem & { permission: string })[] = [
     href: '/students/import',
     label: 'Import students',
     icon: <Upload />,
+    permission: 'students.student.import',
+  },
+  {
+    href: '/students/imports',
+    label: 'Import history',
+    icon: <History />,
     permission: 'students.student.import',
   },
   {

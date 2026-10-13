@@ -1,6 +1,8 @@
 /**
  * /students/:id: one student (ADR-0030). Everything here is for ONE student at a time:
- *   - Profile (edit with "students.student.update" at the student's branch), incl. lateral entry
+ *   - Profile: every detail, read-only; "Edit" opens /students/:id/edit ("students.student.update"
+ *     at the student's branch). Sensitive details only with "students.sensitive.view" (ADR-0031);
+ *     "Admitted … from import IMP-0001, row 2" links to the import record
  *   - Parents / guardians: add, make primary, remove
  *   - Current placement: roll number; CHANGE SECTION or CHANGE BRANCH from a date, with a reason
  *     ("students.enrolment.transfer"; a branch change needs it at both branches). The old
@@ -12,6 +14,7 @@
 import {
   ActionForm,
   Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -22,6 +25,9 @@ import {
   PageHeader,
   Select,
 } from '@eduplatform/ui';
+import { Pencil } from 'lucide-react';
+import Link from 'next/link';
+import { Fragment } from 'react';
 import { SectionPicker } from '../../../../components/section-picker';
 import { api } from '../../../../lib/api';
 import { can, canAt, getMe } from '../../../../lib/me';
@@ -47,18 +53,20 @@ import {
   removeGuardian,
   revokePortalAccess,
   updateEnrolment,
-  updateStudent,
 } from '../actions';
 import {
+  BOARDS,
+  CATEGORIES,
   ENROLMENT_STATUSES,
   GENDERS,
+  LEARNER_LEVELS,
   LEAVING_STATUSES,
   RELATIONS,
+  RESIDENCES,
   STUDENT_STATUSES,
 } from '../labels';
 import { DocumentsCard } from './documents-card';
 
-const isoDate = (value: string) => value.slice(0, 10);
 const date = (value: string) => new Date(value).toLocaleDateString();
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -291,98 +299,57 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
           </Card>
         )}
 
-        {/* --- Profile --------------------------------------------------------------------- */}
+        {/* --- Profile: every detail, read-only; "Edit" opens the full form ---------------- */}
         <Card>
           <CardHeader>
-            <CardTitle>Profile</CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle>Profile</CardTitle>
+              {canEdit && (
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/students/${student.id}/edit`}>
+                    <Pencil /> Edit
+                  </Link>
+                </Button>
+              )}
+            </div>
           </CardHeader>
-          <CardContent>
-            {canEdit ? (
-              <ActionForm action={updateStudent.bind(null, student.id)} submitLabel="Save">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Full name" htmlFor="fullName">
-                    <Input id="fullName" name="fullName" defaultValue={student.fullName} required />
-                  </Field>
-                  <Field label="Surname" htmlFor="surname">
-                    <Input id="surname" name="surname" defaultValue={student.surname ?? ''} />
-                  </Field>
-                  <Field label="Date of birth" htmlFor="dateOfBirth">
-                    <Input
-                      id="dateOfBirth"
-                      name="dateOfBirth"
-                      type="date"
-                      defaultValue={isoDate(student.dateOfBirth)}
-                    />
-                  </Field>
-                  <Field label="Gender" htmlFor="gender">
-                    <Select id="gender" name="gender" defaultValue={student.gender}>
-                      {Object.entries(GENDERS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  <Field label="Phone" htmlFor="phone">
-                    <Input id="phone" name="phone" defaultValue={student.phone ?? ''} />
-                  </Field>
-                  <Field label="Email" htmlFor="email">
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      defaultValue={student.email ?? ''}
-                    />
-                  </Field>
-                  <Field label="Blood group" htmlFor="bloodGroup">
-                    <Input
-                      id="bloodGroup"
-                      name="bloodGroup"
-                      defaultValue={student.bloodGroup ?? ''}
-                    />
-                  </Field>
-                  <Field
-                    label="Admission no"
-                    htmlFor="admissionNo"
-                    hint="Only to correct a mistake"
-                  >
-                    <Input id="admissionNo" name="admissionNo" defaultValue={student.admissionNo} />
-                  </Field>
-                  <Field label="Previous school / college" htmlFor="previousInstitution">
-                    <Input
-                      id="previousInstitution"
-                      name="previousInstitution"
-                      defaultValue={student.previousInstitution ?? ''}
-                    />
-                  </Field>
-                  <Field label="Previous marks" htmlFor="previousMarks">
-                    <Input
-                      id="previousMarks"
-                      name="previousMarks"
-                      defaultValue={student.previousMarks ?? ''}
-                    />
-                  </Field>
-                  <div className="sm:col-span-2">
-                    <Field label="Address" htmlFor="address">
-                      <Input id="address" name="address" defaultValue={student.address ?? ''} />
-                    </Field>
-                  </div>
-                </div>
-              </ActionForm>
-            ) : (
-              <dl className="grid grid-cols-2 gap-y-2 text-sm">
-                <dt className="text-muted-foreground">Date of birth</dt>
-                <dd>{date(student.dateOfBirth)}</dd>
-                <dt className="text-muted-foreground">Gender</dt>
-                <dd>{GENDERS[student.gender]}</dd>
-                <dt className="text-muted-foreground">Phone</dt>
-                <dd>{student.phone ?? '—'}</dd>
-                <dt className="text-muted-foreground">Previous school / college</dt>
-                <dd>{student.previousInstitution ?? '—'}</dd>
-              </dl>
+          <CardContent className="flex flex-col gap-4 text-sm">
+            {profileGroups(student).map(([title, rows]) => (
+              <div key={title}>
+                <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {title}
+                </h3>
+                <dl className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-x-3 gap-y-1">
+                  {rows.map(([label, value]) => (
+                    <Fragment key={label}>
+                      <dt className="text-muted-foreground">{label}</dt>
+                      <dd className="break-words">{value || '—'}</dd>
+                    </Fragment>
+                  ))}
+                </dl>
+              </div>
+            ))}
+            {!student.sensitiveVisible && (
+              <p className="text-xs text-muted-foreground">
+                Aadhaar is masked and category, sub-caste and medical condition are hidden: your
+                roles don&apos;t include &quot;Sensitive student details&quot;.
+              </p>
             )}
-            <p className="mt-4 text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Admitted on {date(student.admissionDate)}
+              {student.importedFrom && (
+                <>
+                  {' '}
+                  from import{' '}
+                  <Link
+                    href={`/students/imports/${student.importedFrom.id}`}
+                    className="text-primary hover:underline"
+                  >
+                    {student.importedFrom.code}
+                  </Link>
+                  {student.importedFrom.row ? `, row ${student.importedFrom.row}` : ''}
+                </>
+              )}
             </p>
           </CardContent>
         </Card>
@@ -734,4 +701,72 @@ function PortalAccess({ student }: { student: StudentProfile }) {
       </CardContent>
     </Card>
   );
+}
+
+/** The Profile card's groups of [label, value] rows. */
+function profileGroups(student: StudentProfile): [string, [string, string | null][]][] {
+  const yes = (value: boolean) => (value ? 'Yes' : 'No');
+  return [
+    [
+      'Student',
+      [
+        ['Date of birth', date(student.dateOfBirth)],
+        ['Gender', GENDERS[student.gender]],
+        ['Blood group', student.bloodGroup],
+      ],
+    ],
+    [
+      'Contact',
+      [
+        ['Phone', student.phone],
+        ['Alternate phone', student.alternatePhone],
+        ['Email', student.email],
+        ['Address', student.address],
+        ['Permanent address', student.permanentAddress],
+        ['Area', student.area],
+      ],
+    ],
+    [
+      'Identity and category',
+      [
+        ['Aadhaar', student.aadhaar],
+        ['Category', student.category && CATEGORIES[student.category]],
+        ['Sub-caste', student.subCaste],
+      ],
+    ],
+    [
+      'Stay and transport',
+      [
+        ['Day scholar / hosteller', student.residence && RESIDENCES[student.residence]],
+        ['Bus', yes(student.busFacility)],
+        ['Pickup point', student.pickupPoint],
+      ],
+    ],
+    [
+      'Previous education',
+      [
+        ['School / college', student.previousInstitution],
+        ['Board', student.previousBoard && BOARDS[student.previousBoard]],
+        ['Hall ticket no', student.hallTicketNo],
+        ['Percentage', student.previousPercentage && `${student.previousPercentage}%`],
+        ['Grade / points', student.previousGrade],
+      ],
+    ],
+    [
+      'Admission test',
+      [
+        ['Test no', student.admissionTestNo],
+        ['Test marks', student.admissionTestMarks],
+      ],
+    ],
+    [
+      'Health, notes and ranking',
+      [
+        ['Medical condition', student.medicalCondition],
+        ['Remarks', student.remarks],
+        ['Top ranker', yes(student.topRanker)],
+        ['Learner level', student.learnerLevel && LEARNER_LEVELS[student.learnerLevel]],
+      ],
+    ],
+  ];
 }

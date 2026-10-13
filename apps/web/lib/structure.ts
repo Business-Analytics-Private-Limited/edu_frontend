@@ -8,7 +8,7 @@
  */
 import 'server-only';
 import { api } from './api';
-import type { BranchSections, Section, Structure } from './types';
+import type { BranchSections, ClassItem, Section, Structure } from './types';
 
 export async function pickerData(branchIds: string[]) {
   const [structure, ...perBranch] = await Promise.all([
@@ -17,4 +17,20 @@ export async function pickerData(branchIds: string[]) {
   ]);
   const sections: Section[] = perBranch.flatMap((b) => b.sections);
   return { levels: structure.levels, classes: structure.classes, sections };
+}
+
+/** Every class above sections with its path ("Junior › MPC › JEE Mains"), in tree order. */
+export function classPaths(classes: ClassItem[]): { id: string; label: string }[] {
+  const byOrder = (a: ClassItem, b: ClassItem) =>
+    a.sortOrder - b.sortOrder || a.name.localeCompare(b.name);
+  const out: { id: string; label: string }[] = [];
+  const walk = (parentId: string | null, prefix: string) => {
+    for (const c of classes.filter((x) => x.parentId === parentId).sort(byOrder)) {
+      const label = prefix ? `${prefix} › ${c.name}` : c.name;
+      out.push({ id: c.id, label });
+      walk(c.id, label);
+    }
+  };
+  walk(null, '');
+  return out;
 }

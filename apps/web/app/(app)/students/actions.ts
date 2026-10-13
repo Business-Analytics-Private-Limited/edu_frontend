@@ -10,12 +10,78 @@ import { redirect } from 'next/navigation';
 import { api, apiUpload, errorMessage } from '../../../lib/api';
 import { flash } from '../../../lib/flash';
 import { parseCsv } from '../../../lib/csv';
-import type { FormState, StudentProfile } from '../../../lib/types';
+import { IMPORT_COLUMNS } from '../../../lib/import-columns';
+import type { ExcludedRow, FormState, ImportResult, StudentProfile } from '../../../lib/types';
 
 /** A text field, or undefined when left empty (so optional fields are left out). */
 function text(form: FormData, name: string): string | undefined {
   const value = String(form.get(name) ?? '').trim();
   return value === '' ? undefined : value;
+}
+
+/** The student's own details that are plain text (or a fixed value) in the form. */
+const TEXT_DETAILS = [
+  'surname',
+  'bloodGroup',
+  'phone',
+  'alternatePhone',
+  'email',
+  'address',
+  'permanentAddress',
+  'area',
+  'residence',
+  'pickupPoint',
+  'previousInstitution',
+  'previousBoard',
+  'hallTicketNo',
+  'previousGrade',
+  'admissionTestNo',
+  'remarks',
+  'learnerLevel',
+];
+/** Only in the form for users who may see them ("sensitiveShown" is then sent too). */
+const SENSITIVE_DETAILS = ['aadhaar', 'category', 'subCaste', 'medicalCondition'];
+const NUMBER_DETAILS = ['previousPercentage', 'admissionTestMarks'];
+
+/**
+ * The details from components/student-fields.tsx, as the API wants them. When editing
+ * (`clearEmpty`), an emptied field is sent as null so the API clears it; when adding, empty
+ * fields are left out. Sensitive fields are only sent when the form showed them.
+ */
+function studentDetails(form: FormData, clearEmpty: boolean) {
+  const empty = clearEmpty ? null : undefined;
+  const body: Record<string, unknown> = {
+    fullName: text(form, 'fullName'),
+    dateOfBirth: text(form, 'dateOfBirth'),
+    gender: text(form, 'gender'),
+    busFacility: form.get('busFacility') === 'on',
+    topRanker: form.get('topRanker') === 'on',
+  };
+  const textFields = form.get('sensitiveShown')
+    ? [...TEXT_DETAILS, ...SENSITIVE_DETAILS]
+    : TEXT_DETAILS;
+  for (const field of textFields) body[field] = text(form, field) ?? empty;
+  for (const field of NUMBER_DETAILS) {
+    const value = text(form, field);
+    body[field] = value === undefined ? empty : Number(value);
+  }
+  if (!body.busFacility) body.pickupPoint = empty;
+  return body;
+}
+
+/** Father, mother and guardian rows of the "Add student" form; the first one is the main contact. */
+function parentsFrom(form: FormData) {
+  const relations = { father: 'FATHER', mother: 'MOTHER', guardian: 'GUARDIAN' } as const;
+  const parents = Object.entries(relations)
+    .filter(([who]) => text(form, `${who}Name`))
+    .map(([who, relation], index) => ({
+      fullName: text(form, `${who}Name`),
+      relation,
+      phone: text(form, `${who}Phone`),
+      occupation: text(form, `${who}Occupation`),
+      isPrimary: index === 0,
+    }));
+  return parents.length ? parents : undefined;
 }
 
 /** Runs an API call for one student's page, refreshes it, and says what happened. */
@@ -32,7 +98,6 @@ async function forStudent(id: string, call: () => Promise<unknown>, success: str
 export async function admitStudent(_previous: FormState, form: FormData): Promise<FormState> {
   const sectionId = text(form, 'classId');
   const academicYearId = text(form, 'academicYearId');
-  const guardianName = text(form, 'guardianName');
   let student: StudentProfile;
   try {
     student = await api<StudentProfile>('/students', {
@@ -41,59 +106,35 @@ export async function admitStudent(_previous: FormState, form: FormData): Promis
         branchId: text(form, 'branchId'),
         admissionNo: text(form, 'admissionNo'),
         admissionDate: text(form, 'admissionDate'),
-        fullName: text(form, 'fullName'),
-        surname: text(form, 'surname'),
-        dateOfBirth: text(form, 'dateOfBirth'),
-        gender: text(form, 'gender'),
-        phone: text(form, 'phone'),
-        email: text(form, 'email'),
-        address: text(form, 'address'),
-        previousInstitution: text(form, 'previousInstitution'),
-        previousMarks: text(form, 'previousMarks'),
+        ...studentDetails(form, false),
         enrolment:
           sectionId && academicYearId
             ? { academicYearId, classId: sectionId, rollNo: text(form, 'rollNo') }
             : undefined,
-        guardians: guardianName
-          ? [
-              {
-                fullName: guardianName,
-                relation: text(form, 'guardianRelation'),
-                phone: text(form, 'guardianPhone'),
-              },
-            ]
-          : undefined,
+        guardians: parentsFrom(form),
       },
     });
   } catch (error) {
     return { error: errorMessage(error) };
   }
-  await flash('Student admitted');
+  await flash('Student added');
   redirect(`/students/${student.id}`);
 }
 
+/** The "Edit student" page: saves every detail, then goes back to the student's page. */
 export async function updateStudent(id: string, _previous: FormState, form: FormData) {
-  return forStudent(
-    id,
-    () =>
-      api(`/students/${id}`, {
-        method: 'PATCH',
-        body: {
-          fullName: text(form, 'fullName'),
-          surname: text(form, 'surname'),
-          dateOfBirth: text(form, 'dateOfBirth'),
-          gender: text(form, 'gender'),
-          bloodGroup: text(form, 'bloodGroup'),
-          phone: text(form, 'phone'),
-          email: text(form, 'email'),
-          address: text(form, 'address'),
-          previousInstitution: text(form, 'previousInstitution'),
-          previousMarks: text(form, 'previousMarks'),
-          admissionNo: text(form, 'admissionNo'),
-        },
-      }),
-    'Saved',
-  );
+  try {
+    await api(`/students/${id}`, {
+      method: 'PATCH',
+      body: { ...studentDetails(form, true), admissionNo: text(form, 'admissionNo') },
+    });
+  } catch (error) {
+    return { error: errorMessage(error) } satisfies FormState;
+  }
+  revalidatePath(`/students/${id}`);
+  revalidatePath('/students');
+  await flash('Student details saved');
+  redirect(`/students/${id}`);
 }
 
 /** The student leaves: becomes outgoing (transferred, discontinued or completed). */
@@ -284,51 +325,43 @@ export async function applyPromotion(_previous: FormState, form: FormData): Prom
 
 // --- Import and admission numbers ---------------------------------------------------------------
 
-/**
- * The columns of an import file (also the template's header). Where the students go (branch,
- * year, section) is chosen on the screen, not in the file (ADR-0030).
- */
-const IMPORT_COLUMNS = [
-  'admissionNo',
-  'admissionDate',
-  'fullName',
-  'surname',
-  'dateOfBirth',
-  'gender',
-  'phone',
-  'email',
-  'address',
-  'previousInstitution',
-  'previousMarks',
-  'rollNo',
-  'guardianName',
-  'guardianRelation',
-  'guardianPhone',
-];
+/** "Row 3: reason; reason · Row 4: …" for the first excluded rows. */
+function describeExcluded(excluded: ExcludedRow[]): string {
+  const shown = excluded
+    .slice(0, 15)
+    .map((e) => `Row ${e.row}${e.fullName ? ` (${e.fullName})` : ''}: ${e.reasons.join('; ')}`)
+    .join(' · ');
+  return excluded.length > 15 ? `${shown} · and ${excluded.length - 15} more rows` : shown;
+}
 
+/**
+ * The import page's two buttons (ADR-0031):
+ *   "Check the file" (intent=check): nothing is saved; says how many rows can be imported and
+ *     which will be excluded, and why;
+ *   "Import students" (intent=import): the valid rows are saved, the invalid ones excluded; the
+ *     import record (IMP-0001 …) opens, with the excluded rows and their reasons.
+ */
 export async function importStudents(_previous: FormState, form: FormData): Promise<FormState> {
   const file = form.get('file');
   if (!text(form, 'classId')) return { error: 'Choose the section the students go into' };
   if (!(file instanceof File) || file.size === 0) return { error: 'Choose a CSV file' };
   if (file.size > 5_000_000) return { error: 'The file is too big (5 MB at most)' };
-  const rows = parseCsv(await file.text(), IMPORT_COLUMNS);
+  const rows = parseCsv(
+    await file.text(),
+    IMPORT_COLUMNS.map((c) => c.name),
+  );
   if (rows.length === 0) return { error: 'The file has no rows under its header' };
   if (rows.length > 2000) return { error: 'At most 2000 students per file; split the file' };
-  // Two buttons: "Check the file" (intent=check) saves nothing; "Import students" saves.
   const dryRun = form.get('intent') !== 'import';
 
-  let result: {
-    ok: boolean;
-    total: number;
-    imported: number;
-    errors: { row: number; message: string }[];
-  };
+  let result: ImportResult;
   try {
-    result = await api('/students/import', {
+    result = await api<ImportResult>('/students/import', {
       method: 'POST',
       body: {
         academicYearId: text(form, 'academicYearId'),
         sectionId: text(form, 'classId'),
+        fileName: file.name,
         dryRun,
         rows,
       },
@@ -336,21 +369,28 @@ export async function importStudents(_previous: FormState, form: FormData): Prom
   } catch (error) {
     return { error: errorMessage(error) };
   }
-  if (result.errors.length > 0) {
-    const shown = result.errors
-      .slice(0, 30)
-      .map((e) => (e.row > 0 ? `Row ${e.row}: ${e.message}` : e.message))
-      .join(' · ');
-    const more = result.errors.length > 30 ? ` · and ${result.errors.length - 30} more` : '';
-    return { error: `Nothing was saved. Fix these and try again: ${shown}${more}` };
-  }
+  const excluded = result.excludedCount
+    ? ` ${result.excludedCount} row(s) will be excluded: ${describeExcluded(result.excluded)}`
+    : '';
   if (dryRun) {
+    if (result.importable === 0) {
+      return { error: `Checked ${result.total} row(s): none can be imported.${excluded}` };
+    }
     return {
-      success: `Checked ${result.total} row(s): no problems, nothing saved yet. Click "Import students" to save them.`,
+      success: `Checked ${result.total} row(s): ${result.importable} can be imported, nothing saved yet. Click "Import students" to save them.${excluded}`,
+    };
+  }
+  if (!result.run) {
+    return {
+      error: `Nothing was imported: every row has a problem. ${describeExcluded(result.excluded)}`,
     };
   }
   revalidatePath('/students');
-  return { success: `Imported ${result.imported} student(s). They are in Students → Current.` };
+  await flash(
+    `${result.run.code}: imported ${result.imported} student(s)` +
+      (result.excludedCount ? `, excluded ${result.excludedCount} (see below)` : ''),
+  );
+  redirect(`/students/imports/${result.run.id}`);
 }
 
 /** AUTOMATIC (with a pattern) or MANUAL admission numbers for the whole organization. */
@@ -365,6 +405,7 @@ export async function setNumbering(_previous: FormState, form: FormData): Promis
     return { error: errorMessage(error) };
   }
   revalidatePath('/students/settings');
+  revalidatePath('/students/import'); // the import page shows the switch and the columns
   return {
     success:
       result.mode === 'AUTOMATIC'

@@ -1,19 +1,21 @@
 /**
  * /students/import: admit many students from a CSV file (Excel: File -> Save as -> CSV), into ONE
- * section chosen on the screen (ADR-0030):
+ * section chosen on the screen (ADR-0030, ADR-0031):
  *   1. choose the branch, the academic year, then the structure level by level (e.g. Junior ›
  *      MPC › JEE Mains), then the section;
- *   2. download the template, fill it in (one student per row; only the students' own columns);
- *   3. "Check the file" first: every row is checked and problems are listed by row number,
- *      nothing is saved;
- *   4. "Import students": checked again, then all rows are saved, or none.
- * Admission numbers: a column only when the organization types them; automatic otherwise.
- * Needs "students.student.import" at the branch.
+ *   2. download the template, fill it in (one student per row; only the students' own columns,
+ *      lib/import-columns.ts);
+ *   3. "Check the file": every row is checked with the "Add student" rules, nothing is saved;
+ *   4. "Import students": the valid rows are saved, the invalid ones excluded with their reasons;
+ *      the import record (IMP-0001 …) opens.
+ * Automatic admission numbers can be switched on or off here too (the template then has no / an
+ * admissionNo column). Needs "students.student.import" at the branch.
  */
 import {
   ActionForm,
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
   EmptyState,
@@ -27,13 +29,16 @@ import {
   Th,
 } from '@eduplatform/ui';
 import { Upload } from 'lucide-react';
+import Link from 'next/link';
 import { SectionPicker } from '../../../../components/section-picker';
 import { api } from '../../../../lib/api';
-import { can, getMe } from '../../../../lib/me';
+import { importColumnsFor } from '../../../../lib/import-columns';
+import { can, canAt, getMe } from '../../../../lib/me';
 import { branchesForWork } from '../../../../lib/places';
 import { pickerData } from '../../../../lib/structure';
 import type { AcademicYear, Branch, OwnOrganization } from '../../../../lib/types';
 import { importStudents } from '../actions';
+import { NumberingForm } from '../numbering-form';
 
 export default async function ImportStudentsPage() {
   const me = await getMe();
@@ -61,38 +66,24 @@ export default async function ImportStudentsPage() {
   const picker = await pickerData(branches.map((b) => b.id));
   const openYears = years.filter((y) => y.status !== 'CLOSED');
   const manual = organization.admissionNumbering === 'MANUAL';
-  const columns: [string, string][] = [
-    [
-      manual ? 'admissionNo *' : 'admissionNo',
-      manual ? 'Unique in the organization' : 'Leave empty: numbers are automatic',
-    ],
-    ['admissionDate *', '2026-06-01 or 01/06/2026'],
-    ['fullName *', 'As in official records'],
-    ['surname', ''],
-    ['dateOfBirth *', '2010-05-14 or 14/05/2010'],
-    ['gender *', 'male / female / other (or M / F)'],
-    ['phone, email, address', ''],
-    ['previousInstitution, previousMarks', 'For students joining in a later year'],
-    ['rollNo', 'Unique in the section'],
-    [
-      'guardianName, guardianRelation, guardianPhone',
-      'Relation: father / mother / guardian / other',
-    ],
-  ];
+  const columns = importColumnsFor(organization.admissionNumbering);
+  const canSetNumbering = canAt(me, 'students.settings.update', {});
 
   return (
     <>
       <PageHeader
         back={{ href: '/students', label: 'Back to students' }}
         title="Import students"
-        description="Into one section at a time. Check the file first; then import all rows, or none."
+        description="Into one section at a time. Valid rows are imported; rows with problems are left out and listed with the reason."
         actions={
-          <a
-            href="/students/import/template"
-            className="text-sm font-medium text-primary hover:underline"
-          >
-            Download the template
-          </a>
+          <div className="flex flex-wrap gap-4 text-sm font-medium">
+            <a href="/students/import/template" className="text-primary hover:underline">
+              Download the template
+            </a>
+            <Link href="/students/imports" className="text-primary hover:underline">
+              Import history
+            </Link>
+          </div>
         }
       />
       <div className="grid gap-6 lg:grid-cols-2">
@@ -137,37 +128,62 @@ export default async function ImportStudentsPage() {
                 <FileInput id="file" name="file" accept=".csv,text/csv" required />
               </Field>
               <p className="text-xs text-muted-foreground">
-                <strong>Check the file</strong> saves nothing and lists any problems by row.{' '}
-                <strong>Import students</strong> checks again and saves every row, or none.
+                <strong>Check the file</strong> saves nothing: it says how many rows can be imported
+                and which will be excluded, and why. <strong>Import students</strong> saves the
+                valid rows; rows with a problem (or already on record) are left out.
               </p>
             </ActionForm>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Columns</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHead>
-                <tr>
-                  <Th>Column</Th>
-                  <Th>What to write</Th>
-                </tr>
-              </TableHead>
-              <tbody>
-                {columns.map(([column, help]) => (
-                  <tr key={column}>
-                    <Td className="font-mono text-xs">{column}</Td>
-                    <Td className="text-muted-foreground">{help}</Td>
+        <div className="flex flex-col gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Admission numbers</CardTitle>
+              <CardDescription>
+                {manual
+                  ? 'Automatic numbers are OFF: the sheet needs an admissionNo column.'
+                  : `Automatic numbers are ON (${organization.admissionNoPattern}): the sheet has no admissionNo column.`}{' '}
+                Download the template again after changing this.
+              </CardDescription>
+            </CardHeader>
+            {canSetNumbering && (
+              <CardContent>
+                <NumberingForm organization={organization} />
+              </CardContent>
+            )}
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Columns</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHead>
+                  <tr>
+                    <Th>Column</Th>
+                    <Th>What to write</Th>
                   </tr>
-                ))}
-              </tbody>
-            </Table>
-            <p className="mt-2 text-xs text-muted-foreground">* required</p>
-          </CardContent>
-        </Card>
+                </TableHead>
+                <tbody>
+                  {columns.map((c) => (
+                    <tr key={c.name}>
+                      <Td className="font-mono text-xs">
+                        {c.name}
+                        {c.required ? ' *' : ''}
+                      </Td>
+                      <Td className="text-muted-foreground">{c.help}</Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+              <p className="mt-2 text-xs text-muted-foreground">
+                * required; every other column may be left empty or left out.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </>
   );

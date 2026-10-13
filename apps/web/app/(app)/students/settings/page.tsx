@@ -15,21 +15,15 @@ import {
   CardTitle,
   Checkbox,
   EmptyState,
-  Field,
   Input,
   PageHeader,
-  Select,
 } from '@eduplatform/ui';
 import { Settings } from 'lucide-react';
 import { api } from '../../../../lib/api';
 import { canAt, getMe } from '../../../../lib/me';
 import type { DocumentType, OwnOrganization } from '../../../../lib/types';
-import {
-  createDocumentType,
-  deleteDocumentType,
-  setNumbering,
-  updateDocumentType,
-} from '../actions';
+import { createDocumentType, deleteDocumentType, updateDocumentType } from '../actions';
+import { NumberingForm } from '../numbering-form';
 
 export default async function StudentSettingsPage() {
   const me = await getMe();
@@ -62,26 +56,7 @@ export default async function StudentSettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ActionForm action={setNumbering} submitLabel="Save">
-              <Field label="How" htmlFor="mode">
-                <Select id="mode" name="mode" defaultValue={organization.admissionNumbering}>
-                  <option value="MANUAL">Typed in (form and import sheet)</option>
-                  <option value="AUTOMATIC">Automatic, from a pattern</option>
-                </Select>
-              </Field>
-              <Field
-                label="Pattern (automatic)"
-                htmlFor="pattern"
-                hint={`{CODE} = ${organization.code}, {BRANCH} = branch code (a counter per branch), {YY} or {YYYY} = year (restarts every year), {SEQ:4} = running number`}
-              >
-                <Input
-                  id="pattern"
-                  name="pattern"
-                  defaultValue={organization.admissionNoPattern ?? ''}
-                  placeholder="{CODE}{YY}{SEQ:4}"
-                />
-              </Field>
-            </ActionForm>
+            <NumberingForm organization={organization} />
           </CardContent>
         </Card>
 

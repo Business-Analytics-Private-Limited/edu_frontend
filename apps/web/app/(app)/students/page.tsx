@@ -3,38 +3,34 @@
  *   Current    studying now (ACTIVE)
  *   Outgoing   left the organization: transferred, discontinued or completed (ADR-0030); kept in
  *              full, never deleted
- * Filters (a normal GET form, so they end up in the URL): search, branch, academic year, and any
- * part of the structure, e.g. "Junior › MPC › JEE Mains" across every branch (the Director's view).
+ * Filters (a normal GET form, so they end up in the URL): search, branch, academic year, any part
+ * of the structure (e.g. "Junior › MPC › JEE Mains" across every branch, the Director's view), and
+ * a section of the chosen branch.
+ * At the top: "Add student" (one student, a form) and "Import students" (a sheet). On each row:
+ * view (eye) and edit (pencil, only where you may edit students) (ADR-0031).
  */
-import {
-  Badge,
-  Button,
-  Input,
-  PageHeader,
-  Select,
-  Table,
-  TableHead,
-  Td,
-  Th,
-} from '@eduplatform/ui';
+import { Badge, Button, PageHeader, Table, TableHead, Td, Th } from '@eduplatform/ui';
+import { Star, Upload, UserPlus } from 'lucide-react';
 import Link from 'next/link';
+import { RowActions } from '../../../components/student-row-actions';
+import {
+  filterQuery,
+  StudentFilters,
+  type StudentFilterValues,
+} from '../../../components/student-filters';
 import { api } from '../../../lib/api';
-import { can, getMe } from '../../../lib/me';
+import { can, canAt, getMe } from '../../../lib/me';
 import type {
   AcademicYear,
   Branch,
-  ClassItem,
+  BranchSections,
   Page,
   StudentListItem,
   Structure,
 } from '../../../lib/types';
 import { STUDENT_STATUSES } from './labels';
 
-interface Filters {
-  search?: string;
-  branchId?: string;
-  classId?: string;
-  academicYearId?: string;
+interface Filters extends StudentFilterValues {
   show?: string;
   page?: string;
 }
@@ -42,17 +38,20 @@ interface Filters {
 export default async function StudentsPage({ searchParams }: { searchParams: Promise<Filters> }) {
   const filters = await searchParams;
   const show = filters.show === 'outgoing' ? 'outgoing' : 'current';
-  const query = new URLSearchParams({ page: filters.page ?? '1', pageSize: '25', show });
-  for (const key of ['search', 'branchId', 'classId', 'academicYearId'] as const) {
-    if (filters[key]) query.set(key, filters[key]!);
-  }
+  const query = filterQuery(filters);
+  query.set('page', filters.page ?? '1');
+  query.set('pageSize', '25');
+  query.set('show', show);
 
   const me = await getMe();
-  const [result, branches, years, structure] = await Promise.all([
+  const [result, branches, years, structure, branchSections] = await Promise.all([
     api<Page<StudentListItem>>(`/students?${query}`),
     can(me, 'platform.branch.view') ? api<Branch[]>('/branches') : [],
     can(me, 'academic.year.view') ? api<AcademicYear[]>('/academic-years') : [],
     can(me, 'academic.structure.view') ? api<Structure>('/academic-structure') : null,
+    filters.branchId && can(me, 'academic.structure.view')
+      ? api<BranchSections>(`/branches/${filters.branchId}/sections`)
+      : null,
   ]);
   const pages = Math.max(1, Math.ceil(result.total / result.pageSize));
   const link = (change: Partial<Filters>) =>
@@ -60,20 +59,28 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       Object.entries({ ...filters, ...change }).filter(([, v]) => v) as [string, string][],
     )}`;
 
-  // Every class of the structure, as "Junior › MPC › JEE Mains", to filter by any part of it.
-  const classOptions = structure ? labelled(structure.classes) : [];
-
   return (
     <>
       <PageHeader
         title="Students"
         description={`${result.total} ${show} student(s)`}
         actions={
-          can(me, 'students.student.create') && (
-            <Button asChild>
-              <Link href="/students/new">Admit student</Link>
-            </Button>
-          )
+          <div className="flex flex-wrap gap-2">
+            {can(me, 'students.student.import') && (
+              <Button asChild variant="outline">
+                <Link href="/students/import">
+                  <Upload /> Import students
+                </Link>
+              </Button>
+            )}
+            {can(me, 'students.student.create') && (
+              <Button asChild>
+                <Link href="/students/new">
+                  <UserPlus /> Add student
+                </Link>
+              </Button>
+            )}
+          </div>
         }
       />
 
@@ -93,52 +100,14 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         ))}
       </div>
 
-      <form className="mb-4 flex flex-wrap gap-2">
-        <input type="hidden" name="show" value={show} />
-        <Input
-          name="search"
-          defaultValue={filters.search}
-          placeholder="Name, admission no or phone"
-          className="max-w-xs"
-        />
-        {branches.length > 1 && (
-          <Select name="branchId" defaultValue={filters.branchId ?? ''} className="w-44">
-            <option value="">All branches</option>
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </Select>
-        )}
-        {years.length > 0 && (
-          <Select
-            name="academicYearId"
-            defaultValue={filters.academicYearId ?? ''}
-            className="w-36"
-          >
-            <option value="">Any year</option>
-            {years.map((y) => (
-              <option key={y.id} value={y.id}>
-                {y.name}
-              </option>
-            ))}
-          </Select>
-        )}
-        {classOptions.length > 0 && (
-          <Select name="classId" defaultValue={filters.classId ?? ''} className="w-72">
-            <option value="">All {structure!.levels[0].toLowerCase()}s, groups and streams</option>
-            {classOptions.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </Select>
-        )}
-        <Button type="submit" variant="outline">
-          Filter
-        </Button>
-      </form>
+      <StudentFilters
+        filters={filters}
+        hidden={{ show }}
+        branches={branches}
+        years={years}
+        structure={structure}
+        sections={branchSections?.sections ?? []}
+      />
 
       <Table>
         <TableHead>
@@ -148,6 +117,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
             <Th>Branch</Th>
             <Th>{show === 'current' ? 'Section' : 'Last section'}</Th>
             <Th>Status</Th>
+            <Th className="w-20 text-right">Actions</Th>
           </tr>
         </TableHead>
         <tbody>
@@ -162,6 +132,12 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
                   {s.fullName}
                   {s.surname ? ` ${s.surname}` : ''}
                 </Link>
+                {s.topRanker && (
+                  <Star
+                    className="ml-1 inline size-3.5 fill-amber-400 text-amber-500"
+                    aria-label="Top ranker"
+                  />
+                )}
               </Td>
               <Td>{s.branch.name}</Td>
               <Td>
@@ -182,11 +158,17 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
                   {STUDENT_STATUSES[s.status]}
                 </Badge>
               </Td>
+              <Td className="text-right">
+                <RowActions
+                  id={s.id}
+                  canEdit={canAt(me, 'students.student.update', { branchId: s.branch.id })}
+                />
+              </Td>
             </tr>
           ))}
           {result.items.length === 0 && (
             <tr>
-              <Td colSpan={5} className="py-8 text-center text-muted-foreground">
+              <Td colSpan={6} className="py-8 text-center text-muted-foreground">
                 No students found.
               </Td>
             </tr>
@@ -209,20 +191,4 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       )}
     </>
   );
-}
-
-/** Every class with its path ("Junior › MPC › JEE Mains"), in tree order. */
-function labelled(classes: ClassItem[]): { id: string; label: string }[] {
-  const byOrder = (a: ClassItem, b: ClassItem) =>
-    a.sortOrder - b.sortOrder || a.name.localeCompare(b.name);
-  const out: { id: string; label: string }[] = [];
-  const walk = (parentId: string | null, prefix: string) => {
-    for (const c of classes.filter((x) => x.parentId === parentId).sort(byOrder)) {
-      const label = prefix ? `${prefix} › ${c.name}` : c.name;
-      out.push({ id: c.id, label });
-      walk(c.id, label);
-    }
-  };
-  walk(null, '');
-  return out;
 }

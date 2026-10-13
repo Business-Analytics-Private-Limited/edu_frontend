@@ -243,6 +243,11 @@ export type Gender = 'MALE' | 'FEMALE' | 'OTHER' | 'UNDISCLOSED';
 export type StudentStatus = 'ACTIVE' | 'TRANSFERRED' | 'DISCONTINUED' | 'COMPLETED';
 export type GuardianRelation = 'FATHER' | 'MOTHER' | 'GUARDIAN' | 'OTHER';
 export type EnrolmentStatus = 'ACTIVE' | 'MOVED' | 'PROMOTED' | 'COMPLETED' | 'LEFT';
+export type ReservationCategory =
+  'OC' | 'BC_A' | 'BC_B' | 'BC_C' | 'BC_D' | 'BC_E' | 'SC' | 'ST' | 'EWS' | 'OTHER';
+export type Residence = 'DAY_SCHOLAR' | 'HOSTELLER';
+export type PreviousBoard = 'SSC' | 'CBSE' | 'ICSE' | 'INTERMEDIATE' | 'IB' | 'OTHER';
+export type LearnerLevel = 'EXPERT' | 'MEDIUM' | 'SLOW';
 
 export interface StudentListItem {
   id: string;
@@ -252,6 +257,8 @@ export interface StudentListItem {
   gender: Gender;
   phone: string | null;
   status: StudentStatus;
+  topRanker: boolean;
+  learnerLevel: LearnerLevel | null;
   branch: { id: string; name: string };
   /** The latest placement, as text. */
   placement: {
@@ -308,10 +315,35 @@ export interface StudentProfile {
   gender: Gender;
   bloodGroup: string | null;
   phone: string | null;
+  alternatePhone: string | null;
   email: string | null;
   address: string | null;
+  permanentAddress: string | null;
+  area: string | null;
+  /** SENSITIVE: masked (XXXX-XXXX-1234) when sensitiveVisible is false. */
+  aadhaar: string | null;
+  /** SENSITIVE: null when sensitiveVisible is false. */
+  category: ReservationCategory | null;
+  subCaste: string | null;
+  medicalCondition: string | null;
+  /** Whether this user may see the sensitive details ("students.sensitive.view"). */
+  sensitiveVisible: boolean;
+  residence: Residence | null;
+  busFacility: boolean;
+  pickupPoint: string | null;
   previousInstitution: string | null;
-  previousMarks: string | null;
+  previousBoard: PreviousBoard | null;
+  hallTicketNo: string | null;
+  /** Decimals arrive as text, e.g. "91.5". */
+  previousPercentage: string | null;
+  previousGrade: string | null;
+  admissionTestNo: string | null;
+  admissionTestMarks: string | null;
+  remarks: string | null;
+  topRanker: boolean;
+  learnerLevel: LearnerLevel | null;
+  /** The import that admitted the student, and the row in its sheet. */
+  importedFrom: { id: string; code: string; row: number | null } | null;
   status: StudentStatus;
   guardians: {
     id: string;
@@ -324,6 +356,58 @@ export interface StudentProfile {
   /** Newest first. */
   enrolments: Enrolment[];
   statusChanges: StatusChange[];
+}
+
+/** A row left out of an import, and why (ADR-0031). */
+export interface ExcludedRow {
+  row: number;
+  admissionNo: string | null;
+  fullName: string | null;
+  reasons: string[];
+  /** The row as written in the sheet (sensitive values hidden without the permission). */
+  values: Record<string, string>;
+}
+
+/** POST /students/import */
+export interface ImportResult {
+  dryRun: boolean;
+  total: number;
+  importable: number;
+  excludedCount: number;
+  imported: number;
+  excluded: ExcludedRow[];
+  run: { id: string; code: string } | null;
+}
+
+/** GET /students/imports: an import record. */
+export interface ImportRun {
+  id: string;
+  code: string;
+  number: number;
+  fileName: string | null;
+  totalRows: number;
+  importedCount: number;
+  excludedCount: number;
+  branchId: string;
+  branchName: string | null;
+  academicYearName: string | null;
+  section: string;
+  importedByName: string | null;
+  createdAt: string;
+}
+
+/** GET /students/imports/:id */
+export interface ImportRunDetail extends ImportRun {
+  excludedRows: ExcludedRow[];
+  students: {
+    id: string;
+    admissionNo: string;
+    fullName: string;
+    importRow: number | null;
+    status: StudentStatus;
+    /** Optional details still empty, e.g. ["phone", "parent / guardian"]. */
+    missing: string[];
+  }[];
 }
 
 /** GET /promotions/preview */
