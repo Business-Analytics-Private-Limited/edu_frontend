@@ -15,7 +15,8 @@
  * <AlertHost flashCookie="..."> once in the app's root layout.
  *
  * One alert at a time; others wait their turn. Enter = the main button, Esc = cancel.
- * The animations are in styles.css (ep-alert-*).
+ * The animations are in styles.css (ep-alert-*). Each alert is a modal <dialog>, so it is
+ * always on top and usable, also over a slide-in panel (Drawer), which is a <dialog> too.
  */
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -117,6 +118,14 @@ function AlertBox({
   // The latest onClose, without restarting the timer when the parent re-renders.
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
+  // Shown as a modal <dialog>: on top of everything, including an open Drawer (a modal dialog
+  // makes the rest of the page unclickable, so the alert must be one too).
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.open) dialog.showModal();
+    return () => dialog?.close();
+  }, []);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -131,55 +140,61 @@ function AlertBox({
   }, [alert]);
 
   return (
-    <div
-      className="ep-alert-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose(false);
-      }}
+    <dialog
+      ref={dialogRef}
+      onCancel={(event) => event.preventDefault() /* Esc: handled above, once */}
+      className="fixed inset-0 m-0 h-full max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-transparent"
     >
       <div
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={`alert-${alert.id}-title`}
-        aria-describedby={alert.text ? `alert-${alert.id}-text` : undefined}
-        className="ep-alert-box relative w-full max-w-sm overflow-hidden rounded-2xl bg-card px-5 pb-5 pt-7 text-center text-card-foreground shadow-2xl sm:max-w-md sm:px-6 sm:pb-6 sm:pt-8"
+        className="ep-alert-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) onClose(false);
+        }}
       >
-        <Icon icon={alert.icon} />
-        <h2 id={`alert-${alert.id}-title`} className="mt-4 text-xl font-semibold">
-          {alert.title}
-        </h2>
-        {alert.text && (
-          <p
-            id={`alert-${alert.id}-text`}
-            className="mt-2 max-h-[50vh] overflow-y-auto whitespace-pre-line break-words text-sm text-muted-foreground"
-          >
-            {alert.text}
-          </p>
-        )}
-        {(alert.confirmText || question) && (
-          <div className="mt-6 flex flex-col-reverse justify-center gap-2 sm:flex-row">
-            {question && (
-              <Button variant="outline" onClick={() => onClose(false)}>
-                {alert.cancelText}
-              </Button>
-            )}
-            <Button
-              autoFocus
-              variant={alert.danger ? 'destructive' : 'default'}
-              onClick={() => onClose(true)}
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby={`alert-${alert.id}-title`}
+          aria-describedby={alert.text ? `alert-${alert.id}-text` : undefined}
+          className="ep-alert-box relative w-full max-w-sm overflow-hidden rounded-2xl bg-card px-5 pb-5 pt-7 text-center text-card-foreground shadow-2xl sm:max-w-md sm:px-6 sm:pb-6 sm:pt-8"
+        >
+          <Icon icon={alert.icon} />
+          <h2 id={`alert-${alert.id}-title`} className="mt-4 text-xl font-semibold">
+            {alert.title}
+          </h2>
+          {alert.text && (
+            <p
+              id={`alert-${alert.id}-text`}
+              className="mt-2 max-h-[50vh] overflow-y-auto whitespace-pre-line break-words text-sm text-muted-foreground"
             >
-              {alert.confirmText ?? 'OK'}
-            </Button>
-          </div>
-        )}
-        {alert.timer && (
-          <div
-            className="ep-alert-timer absolute inset-x-0 bottom-0 h-1 bg-success/60"
-            style={{ animationDuration: `${alert.timer}ms` }}
-          />
-        )}
+              {alert.text}
+            </p>
+          )}
+          {(alert.confirmText || question) && (
+            <div className="mt-6 flex flex-col-reverse justify-center gap-2 sm:flex-row">
+              {question && (
+                <Button variant="outline" onClick={() => onClose(false)}>
+                  {alert.cancelText}
+                </Button>
+              )}
+              <Button
+                autoFocus
+                variant={alert.danger ? 'destructive' : 'default'}
+                onClick={() => onClose(true)}
+              >
+                {alert.confirmText ?? 'OK'}
+              </Button>
+            </div>
+          )}
+          {alert.timer && (
+            <div
+              className="ep-alert-timer absolute inset-x-0 bottom-0 h-1 bg-success/60"
+              style={{ animationDuration: `${alert.timer}ms` }}
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </dialog>
   );
 }
 

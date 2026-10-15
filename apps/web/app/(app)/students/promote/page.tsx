@@ -1,20 +1,22 @@
 /**
  * /students/promote: move a branch's students on to the next academic year (ADR-0030).
- *   1. choose the branch and the two years (a normal form: ?branchId=&fromYearId=&toYearId=);
- *   2. the preview shows each section with its students and a SUGGESTED section in the new year:
- *      the year's "next" (Junior → Senior, Class 9 → Class 10), same group / stream, same section
- *      code; or "Complete" after the final year (Class 10, Senior, Long Term, final year);
- *   3. change any choice and apply. Nothing is overwritten: last year's placements stay.
+ *   1. the branch and the two years (a normal form: ?branchId=&fromYearId=&toYearId=). They
+ *      start on the current year (or the one that includes today) and the next later year, so
+ *      the students show at once; with no later year, it says to add one first;
+ *   2. the board (promotion-board.tsx): each section with its students to tick (all at first:
+ *      the whole section), and where they go: the SUGGESTED section in the new year (Junior →
+ *      Senior, Class 9 → Class 10, same group / stream, same section code) or "Complete" after
+ *      the final year. Unticked students stay where they are;
+ *   3. promote. Nothing is overwritten: last year's placements stay.
  * Below: the branch's recent promotions; one can be undone while nothing changed since.
- * Needs "students.enrolment.promote" at the branch (a Principal has it).
+ * Moving ONE student to another section or branch during the year is "Shuffle", on the
+ * student's page. Needs "students.enrolment.promote" at the branch (a Principal has it).
  */
 import {
   ActionForm,
   Badge,
   Button,
-  Card,
-  CardContent,
-  Checkbox,
+  EmptyState,
   Field,
   PageHeader,
   Select,
@@ -23,52 +25,82 @@ import {
   Td,
   Th,
 } from '@eduplatform/ui';
-import { api } from '../../../../lib/api';
+import { ArrowUpRight } from 'lucide-react';
+import Link from 'next/link';
+import { unstable_rethrow } from 'next/navigation';
+import type { ReactNode } from 'react';
+import { api, errorMessage } from '../../../../lib/api';
 import { can, getMe } from '../../../../lib/me';
 import { branchesForWork } from '../../../../lib/places';
 import type { AcademicYear, Branch, PromotionPreview, PromotionRun } from '../../../../lib/types';
 import { applyPromotion, undoPromotion } from '../actions';
+import { PromotionBoard } from './promotion-board';
 
 export default async function PromotePage({
   searchParams,
 }: {
   searchParams: Promise<{ branchId?: string; fromYearId?: string; toYearId?: string }>;
 }) {
-  const { branchId = '', fromYearId = '', toYearId = '' } = await searchParams;
+  const params = await searchParams;
   const me = await getMe();
   const [allBranches, years] = await Promise.all([
     can(me, 'platform.branch.view') ? api<Branch[]>('/branches') : [],
     can(me, 'academic.year.view') ? api<AcademicYear[]>('/academic-years') : [],
   ]);
   const branches = branchesForWork(me, allBranches, 'students.enrolment.promote');
-  const ready = branchId && fromYearId && toYearId;
-  const preview = ready
-    ? await api<PromotionPreview>(
-        `/promotions/preview?${new URLSearchParams({ branchId, fromYearId, toYearId })}`,
-      )
-    : null;
-  const total = preview?.rows.reduce((n, r) => n + r.students.length, 0) ?? 0;
-  const runs = branchId
-    ? await api<PromotionRun[]>(`/promotions?${new URLSearchParams({ branchId })}`)
+  const back = { href: '/students', label: 'Back to students' };
+  if (branches.length === 0) {
+    return (
+      <>
+        <PageHeader back={back} title="Promote students" />
+        <EmptyState
+          icon={<ArrowUpRight />}
+          title="Nothing to promote here"
+          description="Your roles don't allow promoting students at any branch (a Principal can)."
+        />
+      </>
+    );
+  }
+
+  // Defaults: the current year (or the one that includes today) and the next later one.
+  const today = new Date().toISOString().slice(0, 10);
+  const byStart = [...years].sort((a, b) => a.startsOn.localeCompare(b.startsOn));
+  const thisYear =
+    byStart.find((y) => y.status === 'ACTIVE') ??
+    byStart.find((y) => y.startsOn.slice(0, 10) <= today && today <= y.endsOn.slice(0, 10)) ??
+    byStart[0];
+  const branchId = params.branchId || branches[0].id;
+  const fromYear = byStart.find((y) => y.id === params.fromYearId) ?? thisYear;
+  const laterYears = fromYear
+    ? byStart.filter((y) => y.startsOn > fromYear.startsOn && y.status !== 'CLOSED')
     : [];
+  const toYear = laterYears.find((y) => y.id === params.toYearId) ?? laterYears[0];
+
+  let preview: PromotionPreview | null = null;
+  let problem: string | null = null;
+  if (fromYear && toYear) {
+    try {
+      preview = await api<PromotionPreview>(
+        `/promotions/preview?${new URLSearchParams({ branchId, fromYearId: fromYear.id, toYearId: toYear.id })}`,
+      );
+    } catch (error) {
+      unstable_rethrow(error); // Next.js redirects (session ended, no access) go on
+      problem = errorMessage(error);
+    }
+  }
+  const runs = await api<PromotionRun[]>(`/promotions?${new URLSearchParams({ branchId })}`);
 
   return (
     <>
       <PageHeader
-        back={{ href: '/students', label: 'Back to students' }}
+        back={back}
         title="Promote students"
-        description="Move a branch's students on to the next academic year, section by section."
+        description="Move students on to the next academic year: a whole section at once, or only the students you tick. To move one student during the year, use Shuffle on their page."
       />
 
-      <form className="mb-6 flex flex-wrap items-end gap-3">
+      <form className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border bg-card p-4 shadow-sm [&>[data-field]]:w-full sm:[&>[data-field]]:w-auto">
         <Field label="Branch" htmlFor="branchId">
-          <Select
-            id="branchId"
-            name="branchId"
-            defaultValue={branchId}
-            required
-            className="w-full sm:w-56"
-          >
+          <Select id="branchId" name="branchId" defaultValue={branchId} className="w-full sm:w-56">
             {branches.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -80,13 +112,13 @@ export default async function PromotePage({
           <Select
             id="fromYearId"
             name="fromYearId"
-            defaultValue={fromYearId}
-            required
-            className="w-full sm:w-52"
+            defaultValue={fromYear?.id}
+            className="w-full sm:w-44"
           >
-            {years.map((y) => (
+            {byStart.map((y) => (
               <option key={y.id} value={y.id}>
                 {y.name}
+                {y.status === 'ACTIVE' ? ' · current' : ''}
               </option>
             ))}
           </Select>
@@ -95,115 +127,54 @@ export default async function PromotePage({
           <Select
             id="toYearId"
             name="toYearId"
-            defaultValue={toYearId}
-            required
-            className="w-full sm:w-52"
+            defaultValue={toYear?.id}
+            className="w-full sm:w-44"
           >
-            {years
-              .filter((y) => y.status !== 'CLOSED')
-              .map((y) => (
-                <option key={y.id} value={y.id}>
-                  {y.name}
-                </option>
-              ))}
+            {laterYears.length === 0 && <option value="">No later year</option>}
+            {laterYears.map((y) => (
+              <option key={y.id} value={y.id}>
+                {y.name}
+              </option>
+            ))}
           </Select>
         </Field>
         <Button type="submit" variant="outline">
-          Preview
+          Show students
         </Button>
       </form>
+
+      {!fromYear && (
+        <Notice>
+          There are no academic years yet.{' '}
+          <Link href="/academic/years" className="font-medium underline">
+            Add one
+          </Link>{' '}
+          first.
+        </Notice>
+      )}
+      {fromYear && !toYear && (
+        <Notice>
+          There is no academic year after {fromYear.name} to promote into.{' '}
+          <Link href="/academic/years" className="font-medium underline">
+            Add the next year
+          </Link>{' '}
+          (e.g. {nextYearName(fromYear.name)}) in Academic years, then come back.
+        </Notice>
+      )}
+      {problem && <Notice>{problem}</Notice>}
 
       {preview && (
         <ActionForm
           action={applyPromotion}
-          submitLabel={`Promote ${total} student(s)`}
-          pendingLabel="Promoting…"
-          confirmMessage={`Promote these students from ${preview.fromYear.name} to ${preview.toYear.name}?`}
-          className="gap-6"
+          submitLabel="Promote"
+          ownButtons
+          confirmMessage={`Promote the selected students from ${preview.fromYear.name} to ${preview.toYear.name}? Their ${preview.fromYear.name} placements stay in the history, and this can be undone below.`}
+          className="gap-4"
         >
           <input type="hidden" name="branchId" value={preview.branch.id} />
           <input type="hidden" name="fromYearId" value={preview.fromYear.id} />
           <input type="hidden" name="toYearId" value={preview.toYear.id} />
-
-          <Table>
-            <TableHead>
-              <tr>
-                <Th>{preview.fromYear.name}</Th>
-                <Th>Students</Th>
-                <Th>{preview.toYear.name}</Th>
-              </tr>
-            </TableHead>
-            <tbody>
-              {preview.rows.map((row) => {
-                const suggested =
-                  row.suggestion.kind === 'section'
-                    ? `section:${row.suggestion.sectionId}`
-                    : row.suggestion.kind === 'complete'
-                      ? 'complete'
-                      : 'skip';
-                return (
-                  <tr key={row.from.id}>
-                    <Td className="font-medium">{row.from.label}</Td>
-                    <Td>
-                      <details>
-                        <summary className="cursor-pointer">
-                          {row.students.length} student(s)
-                          {row.alreadyPlaced > 0 && (
-                            <span className="text-muted-foreground">
-                              {' '}
-                              · {row.alreadyPlaced} already placed
-                            </span>
-                          )}
-                        </summary>
-                        <ul className="mt-1 text-xs text-muted-foreground">
-                          {row.students.map((s) => (
-                            <li key={s.id}>
-                              {s.rollNo ? `#${s.rollNo} ` : ''}
-                              {s.fullName} ({s.admissionNo})
-                            </li>
-                          ))}
-                        </ul>
-                      </details>
-                    </Td>
-                    <Td>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Select
-                          name={`to_${row.from.id}`}
-                          defaultValue={suggested}
-                          className="w-full sm:w-72"
-                          aria-label={`Where ${row.from.label} goes`}
-                        >
-                          {preview.sections.map((s) => (
-                            <option key={s.id} value={`section:${s.id}`}>
-                              {s.label}
-                            </option>
-                          ))}
-                          <option value="complete">Complete (become outgoing)</option>
-                          <option value="skip">Don&apos;t promote</option>
-                        </Select>
-                        {row.suggestion.kind === 'choose' && (
-                          <Badge variant="warning">choose</Badge>
-                        )}
-                      </div>
-                    </Td>
-                  </tr>
-                );
-              })}
-              {preview.rows.length === 0 && (
-                <tr>
-                  <Td colSpan={3} className="py-8 text-center text-muted-foreground">
-                    No current students in {preview.fromYear.name} at this branch.
-                  </Td>
-                </tr>
-              )}
-            </tbody>
-          </Table>
-
-          <Card className="max-w-xl">
-            <CardContent className="flex flex-col gap-4 pt-6">
-              <Checkbox name="keepRollNumbers" label="Keep each student's roll number" />
-            </CardContent>
-          </Card>
+          <PromotionBoard preview={preview} />
         </ActionForm>
       )}
 
@@ -254,5 +225,21 @@ export default async function PromotePage({
         </>
       )}
     </>
+  );
+}
+
+/** "2026-27" -> "2027-28" (a hint only). */
+function nextYearName(name: string): string {
+  const m = name.match(/^(\d{4})-(\d{2})$/);
+  return m
+    ? `${Number(m[1]) + 1}-${String((Number(m[2]) + 1) % 100).padStart(2, '0')}`
+    : 'the next year';
+}
+
+function Notice({ children }: { children: ReactNode }) {
+  return (
+    <p className="mb-6 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm">
+      {children}
+    </p>
   );
 }

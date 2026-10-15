@@ -26,7 +26,7 @@ export const LEAVING_STATUSES = {
 /** A placement's status, for the timeline. */
 export const ENROLMENT_STATUSES = {
   ACTIVE: 'Current',
-  MOVED: 'Moved',
+  MOVED: 'Shuffled',
   PROMOTED: 'Promoted',
   COMPLETED: 'Completed',
   LEFT: 'Left',

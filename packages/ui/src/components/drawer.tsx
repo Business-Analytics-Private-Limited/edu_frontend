@@ -8,11 +8,15 @@
  *   </Drawer>
  *
  * Built on the browser's <dialog>: Esc closes it, focus stays inside, the page behind is
- * dimmed; clicking the dimmed part closes it too.
+ * dimmed; clicking the dimmed part closes it too. An <ActionForm> inside closes it when it
+ * saves successfully (DrawerContext), so the result pop-up shows over the page.
  */
-import { useRef, type ReactNode } from 'react';
+import { createContext, useCallback, useRef, type ReactNode } from 'react';
 import { cn } from '../lib/cn';
 import { Button, type ButtonProps } from './button';
+
+/** Closes the Drawer around (null outside a Drawer); <ActionForm> uses it after a success. */
+export const DrawerContext = createContext<(() => void) | null>(null);
 
 export interface DrawerProps {
   title: string;
@@ -35,6 +39,7 @@ export function Drawer({
   children,
 }: DrawerProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const close = useCallback(() => ref.current?.close(), []);
   return (
     <>
       <Button
@@ -79,7 +84,9 @@ export function Drawer({
               </svg>
             </button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            <DrawerContext.Provider value={close}>{children}</DrawerContext.Provider>
+          </div>
         </div>
       </dialog>
     </>

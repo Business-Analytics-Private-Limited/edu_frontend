@@ -39,6 +39,7 @@ import { cn } from '../lib/cn';
 import { Alert } from './alert';
 import { confirmDialog, notify } from './alerts';
 import { Button, type ButtonProps } from './button';
+import { DrawerContext } from './drawer';
 
 /** What a server action returns to the form: a message to show, or nothing. */
 export interface FormState {
@@ -112,6 +113,10 @@ export function ActionForm({
 }: ActionFormProps) {
   const [state, formAction, pending] = useActionState(action, {});
   const formRef = useRef<HTMLFormElement>(null);
+  // Inside a slide-in panel: close it after a success (the pop-up then shows over the page).
+  // Kept in a ref, so a new function from the panel never replays a result.
+  const closeDrawer = useRef(useContext(DrawerContext));
+  closeDrawer.current = useContext(DrawerContext);
   // Which button sent the form, so only that one says "Saving…".
   const [clicked, setClicked] = useState<'main' | 'secondary'>('main');
 
@@ -120,6 +125,7 @@ export function ActionForm({
     if (state.success) notify(state.success, 'success');
     if (state.error) notify(state.error, 'error');
     if (state.success && resetOnSuccess) formRef.current?.reset();
+    if (state.success) closeDrawer.current?.();
   }, [state, resetOnSuccess]);
 
   // We send the form ourselves (instead of <form action>) because React would otherwise

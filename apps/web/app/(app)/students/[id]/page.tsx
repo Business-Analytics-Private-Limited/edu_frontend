@@ -4,9 +4,11 @@
  *     at the student's branch). Sensitive details only with "students.sensitive.view" (ADR-0031);
  *     "Admitted … from import IMP-0001, row 2" links to the import record
  *   - Parents / guardians: add, make primary, remove
- *   - Current placement: roll number; CHANGE SECTION or CHANGE BRANCH from a date, with a reason
- *     ("students.enrolment.transfer"; a branch change needs it at both branches). The old
- *     placement ends the day before and stays in the timeline.
+ *   - Current placement: roll number; SHUFFLE (a slide-in panel): another section of this
+ *     branch, or another branch and a section there, from a date, with a reason
+ *     ("students.enrolment.transfer"; another branch needs it at both). The old placement ends
+ *     the day before and stays in the timeline ("Shuffled"). Promotion to the next year is on
+ *     /students/promote, not here.
  *   - Timeline: every placement and status change, newest first
  *   - MARK AS LEFT (becomes outgoing: transferred, discontinued, completed) / RE-ADMIT
  *   - Documents, attendance, portal logins; Delete only for mistakes ("students.student.delete")
@@ -20,12 +22,13 @@ import {
   CardHeader,
   CardTitle,
   Checkbox,
+  Drawer,
   Field,
   Input,
   PageHeader,
   Select,
 } from '@eduplatform/ui';
-import { Pencil } from 'lucide-react';
+import { Pencil, Shuffle } from 'lucide-react';
 import Link from 'next/link';
 import { Fragment } from 'react';
 import { SectionPicker } from '../../../../components/section-picker';
@@ -42,8 +45,6 @@ import type {
 } from '../../../../lib/types';
 import {
   addGuardian,
-  changeBranch,
-  changeSection,
   deleteStudent,
   enrol,
   grantPortalAccess,
@@ -52,6 +53,7 @@ import {
   readmitStudent,
   removeGuardian,
   revokePortalAccess,
+  shuffleStudent,
   updateEnrolment,
 } from '../actions';
 import {
@@ -225,48 +227,40 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
               )}
 
               {picker && placement && canMove && (
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <details className="rounded-md border p-3 text-sm">
-                    <summary className="cursor-pointer font-medium text-primary">
-                      Change section
-                    </summary>
+                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed p-3">
+                  <Drawer
+                    title={`Shuffle ${student.fullName}`}
+                    description="Another section of this branch, or another branch. From the chosen day; the old section stays in the timeline."
+                    trigger={
+                      <>
+                        <Shuffle /> Shuffle
+                      </>
+                    }
+                  >
                     <ActionForm
-                      action={changeSection.bind(null, student.id)}
-                      submitLabel="Change section"
-                      confirmMessage="Change the section from the chosen day? The old section stays in the history."
-                      className="mt-3"
+                      action={shuffleStudent.bind(null, student.id, student.branchId)}
+                      submitLabel="Shuffle"
+                      confirmMessage="Shuffle this student from the chosen day? The old section stays in the history."
                     >
                       <SectionPicker
                         {...picker}
-                        sections={ownSections}
+                        branches={[
+                          { id: student.branch.id, name: `${student.branch.name} (now)` },
+                          ...otherBranches,
+                        ]}
+                        defaultBranchId={student.branchId}
+                        defaultSectionId={placement.classId}
                         name="classId"
                         required
-                        defaultSectionId={placement.classId}
                       />
                       <ChangeFields />
                     </ActionForm>
-                  </details>
-                  {otherBranches.length > 0 && (
-                    <details className="rounded-md border p-3 text-sm">
-                      <summary className="cursor-pointer font-medium text-primary">
-                        Change branch
-                      </summary>
-                      <ActionForm
-                        action={changeBranch.bind(null, student.id)}
-                        submitLabel="Change branch"
-                        confirmMessage="Move this student to the chosen branch from that day? The old branch keeps the history."
-                        className="mt-3"
-                      >
-                        <SectionPicker
-                          {...picker}
-                          branches={otherBranches}
-                          name="classId"
-                          required
-                        />
-                        <ChangeFields />
-                      </ActionForm>
-                    </details>
-                  )}
+                  </Drawer>
+                  <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+                    Move this student to another section
+                    {otherBranches.length > 0 ? ' or branch' : ''} from a chosen day. Promotion to
+                    the next year is on Students → Promote.
+                  </p>
                 </div>
               )}
 
@@ -547,17 +541,23 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
 }
 
 /** The date, reason and roll number of a section / branch change. */
+/** When, why and the new roll number, for a shuffle. */
 function ChangeFields() {
   return (
-    <div className="mt-3 grid gap-3 sm:grid-cols-3">
-      <Field label="From" htmlFor="changeOn" hint="First day in the new section">
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field label="From *" htmlFor="changeOn" hint="First day in the new section">
         <Input id="changeOn" name="effectiveOn" type="date" required defaultValue={today()} />
       </Field>
-      <Field label="Reason" htmlFor="changeReason">
-        <Input id="changeReason" name="reason" placeholder="e.g. Cleared the entrance test" />
+      <Field label="Roll no" htmlFor="changeRollNo" hint="In the new section (optional)">
+        <Input id="changeRollNo" name="rollNo" maxLength={20} />
       </Field>
-      <Field label="Roll no" htmlFor="changeRollNo">
-        <Input id="changeRollNo" name="rollNo" />
+      <Field label="Reason" htmlFor="changeReason" className="sm:col-span-2">
+        <Input
+          id="changeReason"
+          name="reason"
+          maxLength={300}
+          placeholder="e.g. Cleared the entrance test; moved closer to home"
+        />
       </Field>
     </div>
   );

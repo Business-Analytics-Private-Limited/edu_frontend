@@ -208,6 +208,39 @@ export async function changeBranch(id: string, _previous: FormState, form: FormD
   );
 }
 
+/**
+ * SHUFFLE (one student, from their page): another section of the same branch, or another
+ * branch and a section there, from a day. The same branch is a section change; another branch
+ * is a branch change (it needs the permission at both). The old placement ends the day before
+ * and stays in the timeline.
+ */
+export async function shuffleStudent(
+  id: string,
+  currentBranchId: string,
+  _previous: FormState,
+  form: FormData,
+) {
+  const branchId = text(form, 'branchId') ?? currentBranchId;
+  const sameBranch = branchId === currentBranchId;
+  return forStudent(
+    id,
+    () =>
+      api(`/students/${id}/${sameBranch ? 'change-section' : 'change-branch'}`, {
+        method: 'POST',
+        body: {
+          ...(!sameBranch && { branchId }),
+          classId: text(form, 'classId'),
+          effectiveOn: text(form, 'effectiveOn'),
+          reason: text(form, 'reason'),
+          rollNo: text(form, 'rollNo'),
+        },
+      }),
+    sameBranch
+      ? 'Shuffled to the new section; the old one stays in the timeline'
+      : 'Shuffled to the new branch; the old branch keeps the history',
+  );
+}
+
 export async function addGuardian(id: string, _previous: FormState, form: FormData) {
   return forStudent(
     id,
@@ -296,16 +329,24 @@ export async function deleteStudent(id: string): Promise<FormState> {
  * Applies a promotion. Each section row has a drop-down named "to_<fromSectionId>" whose value is
  * "section:<id>", "complete" or "skip".
  */
+/**
+ * The promotion board: per section, where its students go (to_<sectionId>: "section:<id>" or
+ * "complete") and which students are ticked (students_<sectionId>). Sections with nobody ticked
+ * are left out; the others send exactly the ticked students (the rest stay where they are).
+ */
 export async function applyPromotion(_previous: FormState, form: FormData): Promise<FormState> {
   const mapping = [...form.keys()]
     .filter((key) => key.startsWith('to_'))
     .map((key) => {
       const fromSectionId = key.slice(3);
+      const studentIds = form.getAll(`students_${fromSectionId}`).map(String);
       const [kind, id] = String(form.get(key)).split(':');
-      if (kind === 'section') return { fromSectionId, toSectionId: id };
-      if (kind === 'complete') return { fromSectionId, complete: true };
-      return { fromSectionId };
-    });
+      if (kind === 'section') return { fromSectionId, toSectionId: id, studentIds };
+      if (kind === 'complete') return { fromSectionId, complete: true, studentIds };
+      return { fromSectionId, studentIds: [] };
+    })
+    .filter((choice) => choice.studentIds.length > 0);
+  if (mapping.length === 0) return { error: 'Tick the students to promote first' };
   let result: { promoted: number; completed: number };
   try {
     result = await api('/promotions', {
@@ -323,7 +364,10 @@ export async function applyPromotion(_previous: FormState, form: FormData): Prom
   }
   revalidatePath('/students/promote');
   return {
-    success: `Promoted ${result.promoted}; ${result.completed} completed (now outgoing).`,
+    success:
+      `Promoted ${result.promoted} student(s)` +
+      (result.completed ? `; ${result.completed} completed (now outgoing)` : '') +
+      '. If something is wrong, Undo is in Recent promotions.',
   };
 }
 
