@@ -98,6 +98,10 @@ async function forStudent(id: string, call: () => Promise<unknown>, success: str
 export async function admitStudent(_previous: FormState, form: FormData): Promise<FormState> {
   const sectionId = text(form, 'classId');
   const academicYearId = text(form, 'academicYearId');
+  // A section without a year can't be saved: say so instead of adding the student unplaced.
+  if (sectionId && !academicYearId) {
+    return { error: 'Choose the academic year for the section (Placement step)' };
+  }
   let student: StudentProfile;
   try {
     student = await api<StudentProfile>('/students', {

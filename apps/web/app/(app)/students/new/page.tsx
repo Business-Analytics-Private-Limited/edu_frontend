@@ -46,6 +46,8 @@ export default async function AddStudentPage() {
       ])
     : [[], null];
 
+  const today = new Date().toISOString().slice(0, 10);
+
   return (
     <>
       <PageHeader back={back} title="Add student" />
@@ -55,7 +57,12 @@ export default async function AddStudentPage() {
           picker={picker}
           years={years
             .filter((y) => y.status !== 'CLOSED')
-            .map((y) => ({ id: y.id, name: y.name, current: y.status === 'ACTIVE' }))}
+            .map((y) => ({
+              id: y.id,
+              name: y.name,
+              current: y.status === 'ACTIVE',
+              today: y.startsOn.slice(0, 10) <= today && today <= y.endsOn.slice(0, 10),
+            }))}
           manual={organization.admissionNumbering === 'MANUAL'}
           pattern={organization.admissionNoPattern}
         />

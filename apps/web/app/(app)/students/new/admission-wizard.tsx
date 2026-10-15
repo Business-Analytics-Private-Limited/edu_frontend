@@ -29,6 +29,7 @@ import {
   User,
   Users,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { SectionPicker, type SectionPickerProps } from '../../../../components/section-picker';
 import {
@@ -56,7 +57,8 @@ interface Props {
   branches: { id: string; name: string }[];
   /** The section picker's data; null when the Academic module isn't available. */
   picker: Omit<SectionPickerProps, 'branches' | 'name'> | null;
-  years: { id: string; name: string; current: boolean }[];
+  /** Open academic years; `current` = the active one, `today` = its dates include today. */
+  years: { id: string; name: string; current: boolean; today: boolean }[];
   /** Admission numbers are typed in (MANUAL). */
   manual: boolean;
   /** The automatic pattern, e.g. {CODE}{YY}{SEQ:4}. */
@@ -161,6 +163,13 @@ export function AdmissionWizard({ branches, picker, years, manual, pattern }: Pr
   const sectionLabel = section
     ? `${'path' in section ? `${section.path} › ` : ''}${section.name}`
     : null;
+  // The year to start with: the current one; else the open year that includes today; else the
+  // only one. A section chosen without a year would otherwise be lost.
+  const defaultYear =
+    years.find((y) => y.current)?.id ??
+    years.find((y) => y.today)?.id ??
+    (years.length === 1 ? years[0].id : '');
+  const branchHasNoSections = !!picker && !picker.sections.some((s) => s.branchId === branchId);
   const age = values.dateOfBirth ? ageOn(values.dateOfBirth, values.admissionDate || today) : null;
   const filled = OPTIONAL.filter((k) => values[k]?.trim()).length;
   const complete = Math.round((filled / OPTIONAL.length) * 100);
@@ -377,6 +386,16 @@ export function AdmissionWizard({ branches, picker, years, manual, pattern }: Pr
                     The section can also be chosen later
                   </span>
                 </legend>
+                {!years.some((y) => y.current) && years.length > 0 && (
+                  <Notice>
+                    No academic year is current yet ({years.map((y) => y.name).join(', ')}{' '}
+                    {years.length === 1 ? 'is' : 'are'} planned).{' '}
+                    <Link href="/academic/years" className="font-medium underline">
+                      Make one current
+                    </Link>{' '}
+                    in Academic years; until then choose the year below.
+                  </Notice>
+                )}
                 {picker ? (
                   <>
                     <SectionPicker
@@ -385,16 +404,26 @@ export function AdmissionWizard({ branches, picker, years, manual, pattern }: Pr
                       name="classId"
                       emptyLabel="Not placed yet"
                     />
+                    {branchHasNoSections && (
+                      <Notice>
+                        {branch} has no sections yet, so the student can only be added without one.{' '}
+                        <Link href="/academic/sections" className="font-medium underline">
+                          Add sections
+                        </Link>{' '}
+                        first to place them now.
+                      </Notice>
+                    )}
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Field
-                        label="Academic year"
+                        label={values.classId ? 'Academic year *' : 'Academic year'}
                         htmlFor="academicYearId"
                         hint="Needed when a section is chosen"
                       >
                         <Select
                           id="academicYearId"
                           name="academicYearId"
-                          defaultValue={years.find((y) => y.current)?.id ?? ''}
+                          required={!!values.classId}
+                          defaultValue={defaultYear}
                         >
                           <option value="">—</option>
                           {years.map((y) => (
@@ -825,5 +854,14 @@ function initialsOf(name: string): string {
       .slice(0, 2)
       .map((w) => w[0]!.toUpperCase())
       .join('') || '?'
+  );
+}
+
+/** A gentle note in a step (e.g. "No academic year is current yet"). */
+function Notice({ children }: { children: ReactNode }) {
+  return (
+    <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-foreground">
+      {children}
+    </p>
   );
 }
