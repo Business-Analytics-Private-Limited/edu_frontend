@@ -115,13 +115,21 @@ export function AdmissionWizard({ branches, picker, years, manual, pattern }: Pr
   const today = new Date().toISOString().slice(0, 10);
 
   const form = () => rootRef.current?.closest('form') ?? null;
-  /** Reads the whole form (all steps) for the card and the review. */
-  const refresh = () => {
+  /** Reads the whole form (all steps) for the card and the review, right now. */
+  const read = () => {
     const f = form();
     if (!f) return;
     const next: Values = {};
     for (const [key, value] of new FormData(f)) if (typeof value === 'string') next[key] = value;
     setValues(next);
+  };
+  /**
+   * The same, a moment later (after the browser's "input" AND "change" events). Choosing in a
+   * list fires "input" then "change": re-drawing between the two would put a controlled list
+   * (the section picker's) back to its old value before its onChange sees the choice.
+   */
+  const refresh = () => {
+    window.setTimeout(read, 0);
   };
 
   /** Checks one step's fields; shows the problems and focuses the first. */
@@ -141,7 +149,7 @@ export function AdmissionWizard({ branches, picker, years, manual, pattern }: Pr
   const goTo = (index: number) => {
     // Forward only through valid steps.
     for (let i = step; i < index; i++) if (!stepIsValid(i)) return;
-    refresh();
+    read();
     setStep(index);
     setReached((r) => Math.max(r, index));
     rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
