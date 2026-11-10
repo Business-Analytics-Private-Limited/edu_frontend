@@ -30,10 +30,11 @@ import Link from 'next/link';
 import { unstable_rethrow } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { api, errorMessage } from '../../../../lib/api';
-import { can, getMe } from '../../../../lib/me';
+import { can, canAt, getMe } from '../../../../lib/me';
 import { branchesForWork } from '../../../../lib/places';
 import type { AcademicYear, Branch, PromotionPreview, PromotionRun } from '../../../../lib/types';
 import { applyPromotion, undoPromotion } from '../actions';
+import { AutoSubmitForm } from '../../../../components/auto-submit-form';
 import { PromotionBoard } from './promotion-board';
 
 export default async function PromotePage({
@@ -98,7 +99,7 @@ export default async function PromotePage({
         description="Move students on to the next academic year: a whole section at once, or only the students you tick. To move one student during the year, use Shuffle on their page."
       />
 
-      <form className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border bg-card p-4 shadow-sm [&>[data-field]]:w-full sm:[&>[data-field]]:w-auto">
+      <AutoSubmitForm className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border bg-card p-4 shadow-sm [&>[data-field]]:w-full sm:[&>[data-field]]:w-auto">
         <Field label="Branch" htmlFor="branchId">
           <Select id="branchId" name="branchId" defaultValue={branchId} className="w-full sm:w-56">
             {branches.map((b) => (
@@ -141,7 +142,7 @@ export default async function PromotePage({
         <Button type="submit" variant="outline">
           Show students
         </Button>
-      </form>
+      </AutoSubmitForm>
 
       {!fromYear && (
         <Notice>
@@ -174,7 +175,16 @@ export default async function PromotePage({
           <input type="hidden" name="branchId" value={preview.branch.id} />
           <input type="hidden" name="fromYearId" value={preview.fromYear.id} />
           <input type="hidden" name="toYearId" value={preview.toYear.id} />
-          <PromotionBoard preview={preview} />
+          {/* A new board whenever the students change (after a promotion or an undo), so the
+              ticks always match what is shown. "Add section" only changes a suggestion: the
+              board stays, with the user's choices. */}
+          <PromotionBoard
+            key={signatureOf(preview)}
+            preview={preview}
+            canAddSections={canAt(me, 'academic.structure.create', {
+              branchId: preview.branch.id,
+            })}
+          />
         </ActionForm>
       )}
 
@@ -226,6 +236,16 @@ export default async function PromotePage({
       )}
     </>
   );
+}
+
+/** A short fingerprint of the board's students: which sections, with which students. */
+function signatureOf(preview: PromotionPreview): string {
+  const text = preview.rows
+    .map((r) => `${r.from.id}:${r.students.map((s) => s.id).join(',')}`)
+    .join('|');
+  let hash = 5381;
+  for (let i = 0; i < text.length; i++) hash = ((hash << 5) + hash + text.charCodeAt(i)) | 0;
+  return `${preview.fromYear.id}-${preview.toYear.id}-${hash >>> 0}`;
 }
 
 /** "2026-27" -> "2027-28" (a hint only). */

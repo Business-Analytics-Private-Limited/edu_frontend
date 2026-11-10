@@ -4,7 +4,7 @@
  * Every form in both apps uses it, so they all behave the same:
  *   - shows the error or success message the action returns, in the form and as a pop-up
  *     alert in the middle of the screen (alerts.tsx), so it is seen even when the form is
- *     off screen
+ *     off screen, or gone because of the action itself (a deleted row, an Undo button)
  *   - `confirmMessage` asks "Are you sure?" in a pop-up first; the confirm button says
  *     `submitLabel` and is red for destructive buttons
  *   - disables the button while saving
@@ -111,7 +111,18 @@ export function ActionForm({
   className,
   children,
 }: ActionFormProps) {
-  const [state, formAction, pending] = useActionState(action, {});
+  // The pop-up is raised as soon as the action answers, not in an effect: the answer may
+  // remove this very form (a deleted row, an undone promotion, a list that is drawn again),
+  // and a form that is gone runs no effects, so nobody would see "Deleted".
+  const [state, formAction, pending] = useActionState(
+    async (previous: FormState, fields: FormData): Promise<FormState> => {
+      const result = (await action(previous, fields)) ?? {};
+      if (result.success) void notify(result.success, 'success');
+      if (result.error) void notify(result.error, 'error');
+      return result;
+    },
+    {},
+  );
   const formRef = useRef<HTMLFormElement>(null);
   // Inside a slide-in panel: close it after a success (the pop-up then shows over the page).
   // Kept in a ref, so a new function from the panel never replays a result.
@@ -121,9 +132,7 @@ export function ActionForm({
   const [clicked, setClicked] = useState<'main' | 'secondary'>('main');
 
   useEffect(() => {
-    // Every result also pops up in the corner, so it is seen even when the form is off screen.
-    if (state.success) notify(state.success, 'success');
-    if (state.error) notify(state.error, 'error');
+    // After a success, while the form is still there: empty it (add forms), close its panel.
     if (state.success && resetOnSuccess) formRef.current?.reset();
     if (state.success) closeDrawer.current?.();
   }, [state, resetOnSuccess]);

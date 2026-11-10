@@ -34,6 +34,7 @@ import { can, canAt, getMe } from '../../../../lib/me';
 import { branchesForWork } from '../../../../lib/places';
 import { pickerData } from '../../../../lib/structure';
 import type { AcademicYear, Branch, OwnOrganization } from '../../../../lib/types';
+import { startingYearId } from '../../../../lib/years';
 import { importStudents } from '../actions';
 import { NumberingForm } from '../numbering-form';
 
@@ -62,6 +63,7 @@ export default async function ImportStudentsPage() {
   }
   const picker = await pickerData(branches.map((b) => b.id));
   const openYears = years.filter((y) => y.status !== 'CLOSED');
+  const startYear = startingYearId(openYears);
   const manual = organization.admissionNumbering === 'MANUAL';
   const columns = importColumnsFor(organization.admissionNumbering);
   const canSetNumbering = canAt(me, 'students.settings.update', {});
@@ -104,13 +106,22 @@ export default async function ImportStudentsPage() {
                 name="classId"
                 required
                 afterBranch={
-                  <Field label="Academic year" htmlFor="academicYearId">
+                  <Field
+                    label="Academic year"
+                    htmlFor="academicYearId"
+                    hint={
+                      openYears.some((y) => y.status === 'ACTIVE')
+                        ? undefined
+                        : 'No year is marked current yet (Academic years): check it is the right one'
+                    }
+                  >
                     <Select
                       id="academicYearId"
                       name="academicYearId"
                       required
-                      defaultValue={openYears.find((y) => y.status === 'ACTIVE')?.id}
+                      defaultValue={startYear ?? ''}
                     >
+                      {!startYear && <option value="">Choose the year…</option>}
                       {openYears.map((y) => (
                         <option key={y.id} value={y.id}>
                           {y.name}

@@ -3,6 +3,8 @@
  *   - one row per student (roll number order) with Present / Absent / Late / Half day / On leave
  *     (Present is pre-selected when nothing is marked yet) and a remark;
  *   - on a past day that is already marked, saving changes needs a reason (a correction);
+ *   - a student moved here on a day already marked in their old section shows that mark, with
+ *     a note; saving the register moves it here (changing it on a past day is a correction);
  *   - if the day can't be marked (future, holiday, weekly off, no academic year) it says why.
  * Read-only for people who may only view attendance.
  */
@@ -32,7 +34,9 @@ export default async function MarkAttendancePage({
   const place = { branchId: roster.section.branchId };
   const canMark = canAt(me, 'attendance.record.mark', place) && !roster.blocked;
   const isPast = roster.date < roster.today;
-  const needsReason = isPast && roster.marked;
+  // A past day already marked (here, or for a student moved here in their old section):
+  // changing a status is a correction and needs a reason.
+  const needsReason = isPast && (roster.marked || roster.students.some((s) => s.markedIn));
   const link = (d: string) => `/attendance/mark?${new URLSearchParams({ classId, date: d })}`;
 
   return (
@@ -107,6 +111,12 @@ function Register({ roster, editable }: { roster: Roster; editable: boolean }) {
               <td className="px-3 py-2">
                 <div className="font-medium">{s.fullName}</div>
                 <div className="text-xs text-muted-foreground">{s.admissionNo}</div>
+                {s.markedIn && (
+                  <div className="text-xs text-warning">
+                    Moved here this day: already marked in {s.markedIn}
+                    {editable ? '; saving keeps it here' : ''}
+                  </div>
+                )}
               </td>
               <td className="px-3 py-2">
                 {editable ? (

@@ -427,10 +427,17 @@ export interface PromotionPreview {
   rows: {
     from: { id: string; label: string };
     suggestion: { kind: 'section'; sectionId: string } | { kind: 'complete' } | { kind: 'choose' };
+    /** Where a matching section would go in the next year ("Add section"); null if none. */
+    nextPlace: { id: string; label: string } | null;
+    /** The "from" section's own name and code (a matching section gets the same code). */
+    section: { name: string; code: string };
+    /** The section's year-level class, and the one after it (to group the targets). */
+    yearClassId: string | null;
+    nextYearClassId: string | null;
     students: { id: string; fullName: string; admissionNo: string; rollNo: string | null }[];
     alreadyPlaced: number;
   }[];
-  sections: { id: string; label: string }[];
+  sections: { id: string; label: string; yearClassId: string | null; yearLabel: string }[];
 }
 
 /** GET /promotions?branchId= : promotions applied at a branch, newest first. */
@@ -470,6 +477,8 @@ export interface Roster {
     status: AttendanceStatus | null;
     remark: string | null;
     corrected: boolean;
+    /** Already marked that day in the section they moved from (saving moves it here). */
+    markedIn: string | null;
   }[];
 }
 

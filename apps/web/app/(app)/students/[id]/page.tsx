@@ -43,6 +43,7 @@ import type {
   StudentDocuments,
   StudentProfile,
 } from '../../../../lib/types';
+import { startingYearId } from '../../../../lib/years';
 import {
   addGuardian,
   deleteStudent,
@@ -273,8 +274,9 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
                         id="academicYearId"
                         name="academicYearId"
                         required
-                        defaultValue={openYears.find((y) => y.status === 'ACTIVE')?.id}
+                        defaultValue={startingYearId(openYears) ?? ''}
                       >
+                        {!startingYearId(openYears) && <option value="">Choose the year…</option>}
                         {openYears.map((y) => (
                           <option key={y.id} value={y.id}>
                             {y.name}

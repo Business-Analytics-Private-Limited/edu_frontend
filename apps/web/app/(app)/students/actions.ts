@@ -326,9 +326,33 @@ export async function deleteStudent(id: string): Promise<FormState> {
 // --- Promotion -----------------------------------------------------------------------------------
 
 /**
- * Applies a promotion. Each section row has a drop-down named "to_<fromSectionId>" whose value is
- * "section:<id>", "complete" or "skip".
+ * "Add section" on the promotion board: a section in the next year (under `parentId`, e.g.
+ * Senior › MPC › JEE Mains) at the branch, usually with the same code as the old one so it is
+ * suggested by itself. The board then shows it as the target.
  */
+export async function addNextYearSection(
+  branchId: string,
+  parentId: string,
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  try {
+    await api(`/branches/${branchId}/sections`, {
+      method: 'POST',
+      body: {
+        parentId,
+        name: text(form, 'name'),
+        code: (text(form, 'code') ?? '').toUpperCase(),
+      },
+    });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath('/students/promote');
+  revalidatePath('/academic/sections');
+  return { success: 'Section added: it is now the suggested target' };
+}
+
 /**
  * The promotion board: per section, where its students go (to_<sectionId>: "section:<id>" or
  * "complete") and which students are ticked (students_<sectionId>). Sections with nobody ticked
