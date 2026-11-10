@@ -1,2 +1,2 @@
-# MultiTenant
-Multi Tenant Organization Application
+# Edu Platform
+Multi Organization Application
