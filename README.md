@@ -1,2 +1,2 @@
-# Edu Platform
-Multi Organization Application
+# Edu Platform Frontend Application
+Multi Organization Application Frontend 
