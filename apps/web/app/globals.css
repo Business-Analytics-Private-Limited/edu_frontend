@@ -1,0 +1,6 @@
+/* The shared design system (theme + Tailwind), then this app's own files for class names. */
+@import '@eduplatform/ui/styles.css';
+
+@source '../app';
+@source '../lib';
+@source '../components';
