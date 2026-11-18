@@ -1,0 +1,232 @@
+/*
+ * EduPlatform design tokens and Tailwind CSS setup, shared by the web app and admin console.
+ *
+ * Each app's globals.css imports this file. Colours are CSS variables, so a tenant's branding
+ * (Phase 2+) can change --primary without touching components. Components use the Tailwind
+ * names on the right (bg-primary, text-muted-foreground, border-border, …), never raw colours.
+ */
+@import 'tailwindcss';
+
+/* Find class names used by this package's components. */
+@source './';
+
+:root {
+  --radius: 0.5rem;
+
+  --background: oklch(0.985 0.002 265);
+  --foreground: oklch(0.21 0.03 265);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.03 265);
+  --muted: oklch(0.965 0.006 265);
+  --muted-foreground: oklch(0.52 0.02 265);
+  --border: oklch(0.915 0.01 265);
+  --input: oklch(0.88 0.012 265);
+  --ring: oklch(0.52 0.19 264);
+
+  /* Primary: EduPlatform blue. Replaced per tenant by branding later. */
+  --primary: oklch(0.48 0.19 264);
+  --primary-foreground: oklch(0.99 0 0);
+  --accent: oklch(0.955 0.025 264);
+  --accent-foreground: oklch(0.36 0.16 264);
+  /* Second brand colour, for gradients next to --primary (e.g. the Add student banner). */
+  --highlight: oklch(0.55 0.22 300);
+
+  --success: oklch(0.58 0.14 155);
+  --warning: oklch(0.72 0.15 75);
+  --destructive: oklch(0.56 0.21 27);
+
+  --sidebar: oklch(0.21 0.04 265);
+  --sidebar-foreground: oklch(0.93 0.01 265);
+  --sidebar-muted: oklch(0.68 0.03 265);
+  --sidebar-accent: oklch(0.29 0.05 265);
+}
+
+/* Makes the variables above available as Tailwind colours: bg-primary, text-sidebar-muted, … */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-highlight: var(--highlight);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-accent: var(--sidebar-accent);
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+
+  --font-sans: ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/*
+ * Pop-up alerts (components/alerts.tsx), in the style of SweetAlert: the box pops in, the icon's
+ * circle and mark draw themselves, the timer bar runs down. Turned off for people who ask their
+ * system for less motion.
+ */
+@keyframes ep-alert-backdrop {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes ep-alert-pop {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes ep-alert-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes ep-alert-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+@keyframes ep-alert-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+@keyframes ep-alert-timer {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+.ep-alert-backdrop {
+  animation: ep-alert-backdrop 0.2s ease-out;
+}
+.ep-alert-box {
+  animation: ep-alert-pop 0.35s ease-out;
+}
+.ep-alert-draw {
+  stroke-dasharray: 160;
+  stroke-dashoffset: 160;
+  animation: ep-alert-draw 0.5s ease-out forwards;
+}
+.ep-alert-draw-late {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: ep-alert-draw 0.35s 0.4s ease-out forwards;
+}
+.ep-alert-shake {
+  animation: ep-alert-shake 0.45s 0.35s ease-in-out;
+}
+.ep-alert-pulse {
+  animation: ep-alert-pulse 0.8s 0.3s ease-in-out 2;
+}
+.ep-alert-timer {
+  transform-origin: left;
+  animation-name: ep-alert-timer;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ep-alert-backdrop,
+  .ep-alert-box,
+  .ep-alert-shake,
+  .ep-alert-pulse {
+    animation: none;
+  }
+  .ep-alert-draw,
+  .ep-alert-draw-late {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+/*
+ * A field's problem, under the field (components/form.tsx Field + action-form.tsx): the
+ * browser's message in red, and a red border on the input.
+ */
+.ep-field[data-error]:not([data-error=''])::after {
+  content: attr(data-error);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: var(--destructive);
+}
+.ep-field[data-error]:not([data-error='']) :is(input, select, textarea) {
+  border-color: var(--destructive);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 12%, transparent);
+}
+
+/* A step of a step-by-step form (e.g. Add student) slides in. */
+@keyframes ep-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.ep-step-in {
+  animation: ep-step-in 0.28s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ep-step-in {
+    animation: none;
+  }
+}
+
+/* The Drawer (components/drawer.tsx) slides in from the right. */
+@keyframes ep-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+.ep-drawer[open] {
+  animation: ep-drawer-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ep-drawer[open] {
+    animation: none;
+  }
+}
