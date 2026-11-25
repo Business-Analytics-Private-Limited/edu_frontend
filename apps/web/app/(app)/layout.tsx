@@ -14,6 +14,8 @@ import {
   CalendarDays,
   CalendarOff,
   ClipboardCheck,
+  ClipboardList,
+  FileSpreadsheet,
   GraduationCap,
   History,
   KeyRound,
@@ -120,6 +122,22 @@ const ATTENDANCE_MENU: (NavItem & { permission: string })[] = [
   },
 ];
 
+/** The Evaluation menu: only when the organization has the Evaluation module (ADR-0035). */
+const EVALUATION_MENU: (NavItem & { permission: string })[] = [
+  {
+    href: '/evaluation',
+    label: 'Exams',
+    icon: <FileSpreadsheet />,
+    permission: 'evaluation.exam.view',
+  },
+  {
+    href: '/evaluation/exam-types',
+    label: 'Exam types',
+    icon: <ClipboardList />,
+    permission: 'evaluation.settings.update',
+  },
+];
+
 /** The Academic menu: only when the organization has the Academic module (and the permission). */
 const ACADEMIC_MENU: (NavItem & { permission: string })[] = [
   {
@@ -167,6 +185,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const attendance = me.enabledModules.includes('attendance')
     ? ATTENDANCE_MENU.filter((item) => can(me, item.permission))
     : [];
+  const evaluation = me.enabledModules.includes('evaluation')
+    ? EVALUATION_MENU.filter((item) => can(me, item.permission))
+    : [];
   const academic = me.enabledModules.includes('academic')
     ? ACADEMIC_MENU.filter((item) => can(me, item.permission))
     : [];
@@ -178,6 +199,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         { items },
         ...(students.length > 0 ? [{ title: 'Students', items: students }] : []),
         ...(attendance.length > 0 ? [{ title: 'Attendance', items: attendance }] : []),
+        ...(evaluation.length > 0 ? [{ title: 'Evaluation', items: evaluation }] : []),
         ...(academic.length > 0 ? [{ title: 'Academic', items: academic }] : []),
         {
           title: 'Account',

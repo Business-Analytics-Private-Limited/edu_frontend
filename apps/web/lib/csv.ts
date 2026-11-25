@@ -68,3 +68,38 @@ function splitRecords(text: string, delimiter: string): string[][] {
   }
   return records;
 }
+
+/**
+ * Reads a CSV file keeping EVERY column, under its heading as written in the file:
+ *   "Admission No,MAT,PHY" -> [{ "Admission No": "201602", MAT: "78", PHY: "AB" }, ...]
+ * For files whose columns depend on the data, e.g. marks (one column per subject of the exam).
+ */
+export function readCsv(text: string): Record<string, string>[] {
+  const clean = text.replace(/^\uFEFF/, '');
+  const firstLine = clean.split(/\r?\n/, 1)[0] ?? '';
+  const delimiter = [',', ';', '\t'].sort(
+    (a, b) => firstLine.split(b).length - firstLine.split(a).length,
+  )[0];
+  const lines = splitRecords(clean, delimiter).filter((cells) =>
+    cells.some((c) => c.trim() !== ''),
+  );
+  if (lines.length === 0) return [];
+  const header = lines[0].map((h) => h.trim());
+  return lines.slice(1).map((cells) => {
+    const row: Record<string, string> = {};
+    header.forEach((column, i) => {
+      if (column) row[column] = (cells[i] ?? '').trim();
+    });
+    return row;
+  });
+}
+
+/** One CSV line: values with a comma, quote or line break are quoted. */
+export function csvLine(values: (string | number | null | undefined)[]): string {
+  return values
+    .map((v) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    })
+    .join(',');
+}
