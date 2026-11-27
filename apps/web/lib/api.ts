@@ -99,10 +99,14 @@ export function errorMessage(error: unknown): string {
 }
 
 /** Sends a form with a file (multipart) to the API, e.g. a student document. */
-export async function apiUpload<T = unknown>(path: string, form: FormData): Promise<T> {
+export async function apiUpload<T = unknown>(
+  path: string,
+  form: FormData,
+  method: 'POST' | 'PUT' = 'POST',
+): Promise<T> {
   const token = await getToken();
   const response = await fetch(`${API_URL}${path}`, {
-    method: 'POST',
+    method,
     headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(await visitor()) },
     body: form, // fetch sets the multipart Content-Type with its boundary
     cache: 'no-store',

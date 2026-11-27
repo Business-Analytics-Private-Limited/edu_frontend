@@ -5,7 +5,8 @@
  *      group, a stream, or one section.
  *   2. The exam: type, academic year, name (unique in the year), dates inside the year, and the
  *      subjects, each with maximum and pass marks, an optional date and an optional portion
- *      ("Ch 1-4"). The subjects offered are those attached to the chosen part (Academic →
+ *      ("Ch 1-4") with the syllabus chapters it covers ticked (ADR-0037), and the grades to use
+ *      (the default grading scheme unless another is chosen). The subjects offered are those attached to the chosen part (Academic →
  *      subjects of a class), ticked; the organization's other subjects are folded away below.
  * Every active section under the chosen part takes part, and each section is expected to have
  * marks only in its own subjects.
@@ -36,6 +37,7 @@ import type {
   BranchSections,
   ExamSubjectOptions,
   ExamType,
+  GradingScheme,
   Structure,
   SubjectListItem,
 } from '../../../../lib/types';
@@ -50,12 +52,13 @@ export default async function NewExamPage({
   const params = await searchParams;
   const me = await getMe();
   const back = { href: '/evaluation', label: 'Back to exams' };
-  const [types, years, allBranches, structure, subjects] = await Promise.all([
+  const [types, years, allBranches, structure, subjects, schemes] = await Promise.all([
     api<ExamType[]>('/exam-types'),
     api<AcademicYear[]>('/academic-years'),
     can(me, 'platform.branch.view') ? api<Branch[]>('/branches') : [],
     api<Structure>('/academic-structure'),
     api<SubjectListItem[]>('/subjects'),
+    api<GradingScheme[]>('/grading-schemes'),
   ]);
   const branches = branchesForWork(me, allBranches, 'evaluation.exam.create');
   const everyBranch = canAt(me, 'evaluation.exam.create', {});
@@ -196,6 +199,27 @@ export default async function NewExamPage({
               </Select>
             </Field>
             <Field
+              label="Grades"
+              htmlFor="gradingSchemeId"
+              hint="Evaluation → Grades. Can be changed later."
+              className="sm:col-span-2"
+            >
+              <Select id="gradingSchemeId" name="gradingSchemeId" defaultValue="">
+                <option value="">
+                  {schemes.some((g) => g.isDefault)
+                    ? `The default (${schemes.find((g) => g.isDefault)?.name})`
+                    : 'No grades (marks and percentages only)'}
+                </option>
+                {schemes
+                  .filter((g) => !g.isDefault)
+                  .map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+              </Select>
+            </Field>
+            <Field
               label="Exam name *"
               htmlFor="examName"
               hint="Unique in the academic year"
@@ -223,7 +247,8 @@ export default async function NewExamPage({
               <p className="text-sm text-muted-foreground">
                 The subjects of {options.appliesTo.label}, all ticked: untick those not in this
                 exam. Each section is expected to have marks only in its own subjects. Portion: what
-                the exam covers, for example &quot;Ch 1-4, Trigonometry&quot;.
+                the exam covers, for example &quot;Ch 1-4, Trigonometry&quot;; tick the syllabus
+                chapters it covers under Chapters.
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">
@@ -274,11 +299,18 @@ export default async function NewExamPage({
   );
 }
 
-/** The subject rows of the form: tick box, maximum, pass marks, date and portion. */
+/** The subject rows of the form: tick box, maximum, pass marks, date, portion and chapters. */
 function SubjectTable({
   rows,
 }: {
-  rows: { id: string; code: string; name: string; ticked: boolean; where?: string }[];
+  rows: {
+    id: string;
+    code: string;
+    name: string;
+    ticked: boolean;
+    where?: string;
+    chapters: { id: string; name: string }[];
+  }[];
 }) {
   return (
     <Table>
@@ -289,6 +321,7 @@ function SubjectTable({
           <Th>Pass</Th>
           <Th>Date (optional)</Th>
           <Th>Portion (optional)</Th>
+          <Th>Chapters (optional)</Th>
         </tr>
       </TableHead>
       <tbody>
@@ -343,6 +376,22 @@ function SubjectTable({
                 aria-label={`${s.name}: portion`}
                 className="w-48"
               />
+            </Td>
+            <Td>
+              {s.chapters.length === 0 ? (
+                <span className="text-xs text-muted-foreground">No syllabus yet</span>
+              ) : (
+                <details>
+                  <summary className="cursor-pointer text-sm">
+                    {s.chapters.length} chapter(s)
+                  </summary>
+                  <div className="mt-2 grid gap-1">
+                    {s.chapters.map((c) => (
+                      <Checkbox key={c.id} name={`chapter_${s.id}`} value={c.id} label={c.name} />
+                    ))}
+                  </div>
+                </details>
+              )}
             </Td>
           </tr>
         ))}

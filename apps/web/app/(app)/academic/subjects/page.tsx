@@ -2,11 +2,12 @@
  * /academic/subjects: the organization's subject list (Mathematics, Physics, ...).
  * Which class has which subject is set on a class's page (Classes -> Subjects).
  * Managing the list needs "academic.subject.*" for the whole organization; a subject that classes use
- * can't be deleted, but can be marked "not in use".
+ * can't be deleted, but can be marked "not in use". Each subject's Syllabus page lists its chapters.
  */
 import {
   ActionForm,
   Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -19,6 +20,7 @@ import {
   Td,
   Th,
 } from '@eduplatform/ui';
+import Link from 'next/link';
 import { api } from '../../../../lib/api';
 import { canAt, getMe } from '../../../../lib/me';
 import type { SubjectListItem } from '../../../../lib/types';
@@ -63,7 +65,10 @@ export default async function SubjectsPage() {
                       </Badge>
                     </Td>
                     <Td className="text-right">
-                      <div className="flex justify-end gap-1">
+                      <div className="flex flex-wrap justify-end gap-1">
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/academic/subjects/${subject.id}/chapters`}>Syllabus</Link>
+                        </Button>
                         {canAt(me, 'academic.subject.update', here) && (
                           <ActionForm
                             action={setSubjectInUse.bind(null, subject.id, !subject.isActive)}

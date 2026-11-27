@@ -3,9 +3,12 @@
  * section the user may see or one section: each student's marks, total, percentage, PASS / FAIL
  * / INCOMPLETE, and ranks in the section and in the whole exam (1, 2, 2, 4 for ties). Exempt
  * subjects don't count; absent, or below the pass marks, in a subject is a FAIL.
+ * With a grading scheme (ADR-0037) each mark shows its grade, plus the overall grade and GPA.
+ * Each student's report card is a PDF; "Report cards" gives the shown students in one PDF.
  */
 import {
   Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -18,6 +21,7 @@ import {
   Td,
   Th,
 } from '@eduplatform/ui';
+import { FileText } from 'lucide-react';
 import { AutoSubmitForm } from '../../../../../../components/auto-submit-form';
 import { api } from '../../../../../../lib/api';
 import type { ExamResults, MarkCell } from '../../../../../../lib/types';
@@ -49,13 +53,26 @@ export default async function ResultsPage({
     ? await api<ExamResults>(`/exams/${id}/results?sectionId=${sectionId}`)
     : all;
   const s = results.summary;
+  const graded = results.gradingScheme !== null;
+  const withGpa = results.students.some((st) => st.gpa !== null);
 
   return (
     <>
       <PageHeader
         back={{ href: `/evaluation/exams/${id}`, label: 'Back to the exam' }}
         title={`${results.exam.name}: results`}
-        description="Ranks are over everyone in the exam, so they are the same on every screen. Exempt subjects don't count."
+        description={`Ranks are over everyone in the exam, so they are the same on every screen. Exempt subjects don't count.${
+          graded ? ` Grades: ${results.gradingScheme?.name}.` : ''
+        }`}
+        actions={
+          <Button asChild variant="outline">
+            <a
+              href={`/evaluation/exams/${id}/report-cards${sectionId ? `?sectionId=${sectionId}` : ''}`}
+            >
+              <FileText /> Report cards
+            </a>
+          </Button>
+        }
       />
       <AutoSubmitForm className="mb-6 flex flex-wrap items-end gap-3">
         <Field label="Section" htmlFor="sectionId">
@@ -108,15 +125,18 @@ export default async function ResultsPage({
             ))}
             <Th className="text-right">Total</Th>
             <Th className="text-right">%</Th>
+            {graded && <Th>Grade</Th>}
+            {withGpa && <Th className="text-right">GPA</Th>}
             <Th>Result</Th>
             <Th className="text-right">Section rank</Th>
+            <Th />
           </tr>
         </TableHead>
         <tbody>
           {results.students.length === 0 && (
             <tr>
               <Td
-                colSpan={7 + results.subjects.length}
+                colSpan={8 + results.subjects.length + (graded ? 1 : 0) + (withGpa ? 1 : 0)}
                 className="py-8 text-center text-muted-foreground"
               >
                 No students to show.
@@ -145,7 +165,14 @@ export default async function ResultsPage({
                   >
                     {/* "n/a": not a subject of the student's section. */}
                     {st.subjectIds.includes(sub.subjectId) ? (
-                      shown(cell)
+                      <>
+                        {shown(cell)}
+                        {st.subjectGrades[sub.subjectId] && (
+                          <span className="block text-[11px] text-muted-foreground">
+                            {st.subjectGrades[sub.subjectId]}
+                          </span>
+                        )}
+                      </>
                     ) : (
                       <span className="text-xs text-muted-foreground">n/a</span>
                     )}
@@ -157,10 +184,20 @@ export default async function ResultsPage({
                 <span className="text-xs text-muted-foreground">/{st.maxTotal}</span>
               </Td>
               <Td className="text-right tabular-nums">{st.percentage ?? '—'}</Td>
+              {graded && <Td className="font-medium">{st.grade ?? '—'}</Td>}
+              {withGpa && <Td className="text-right tabular-nums">{st.gpa ?? '—'}</Td>}
               <Td>
                 <Badge variant={RESULT[st.result].variant}>{RESULT[st.result].label}</Badge>
               </Td>
               <Td className="text-right tabular-nums">{st.sectionRank ?? '—'}</Td>
+              <Td className="text-right">
+                <a
+                  href={`/evaluation/exams/${id}/report-cards/${st.studentId}`}
+                  className="whitespace-nowrap text-sm text-primary hover:underline"
+                >
+                  Report card
+                </a>
+              </Td>
             </tr>
           ))}
         </tbody>
