@@ -39,6 +39,11 @@ export {
   type PermissionGridProps,
   type PermissionResource,
 } from './components/permission-grid';
+export {
+  ResetPasswordButton,
+  type ResetPasswordButtonProps,
+  type ResetPasswordResult,
+} from './components/reset-password-button';
 export { Table, TableHead, Td, Th } from './components/table';
 
 // Page frame

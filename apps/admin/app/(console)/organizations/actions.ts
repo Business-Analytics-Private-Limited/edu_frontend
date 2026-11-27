@@ -2,14 +2,15 @@
 /**
  * Server actions for organizations: what runs on the server when a super admin sends a form
  * (create an organization with its type and branches, change its type / code, switch a module,
- * suspend / activate, add / close / reopen / delete a branch; ADR-0030).
+ * suspend / activate, add / close / reopen / delete a branch; ADR-0030; reset an admin's
+ * password, ADR-0036).
  * Each returns a message for the form to show; on success the page is refreshed.
  */
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api, ApiError } from '../../../lib/api';
 import { flash } from '../../../lib/flash';
-import type { FormState, Organization } from '../../../lib/types';
+import type { FormState, Organization, ResetPasswordResult } from '../../../lib/types';
 
 /** Text field of a form, or undefined when left empty (so optional fields are left out). */
 function text(form: FormData, name: string): string | undefined {
@@ -162,4 +163,23 @@ export async function updateOrganization(
   }
   revalidatePath(`/organizations/${organizationId}`);
   return { success: 'Saved' };
+}
+
+/**
+ * A new temporary password for one of the organization's admins (the API makes it, ADR-0036),
+ * e.g. when the only admin forgot theirs. The button shows it once.
+ */
+export async function resetAdminPassword(
+  organizationId: string,
+  userId: string,
+): Promise<ResetPasswordResult> {
+  try {
+    const result = await api<{ temporaryPassword: string }>(
+      `/super-admin/organizations/${organizationId}/admins/${userId}/reset-password`,
+      { method: 'POST' },
+    );
+    return { success: 'Password reset', temporaryPassword: result.temporaryPassword };
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : 'Could not reset the password' };
+  }
 }

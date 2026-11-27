@@ -3,6 +3,7 @@
  * change its name, code and type (the type only while it has no academic structure), switch
  * modules on/off, suspend / activate it, and add, close / reopen or delete its BRANCHES (only the
  * super admin does that, ADR-0030; ADR-0026 for closing). Delete is only for an empty branch.
+ * Each admin's password can be reset here (ADR-0036), e.g. when the only admin forgot theirs.
  */
 import {
   ActionForm,
@@ -15,6 +16,7 @@ import {
   Field,
   Input,
   PageHeader,
+  ResetPasswordButton,
   Select,
   Table,
   TableHead,
@@ -23,7 +25,13 @@ import {
 } from '@eduplatform/ui';
 import { api } from '../../../../lib/api';
 import { ORGANIZATION_TYPES, type OrganizationDetail } from '../../../../lib/types';
-import { addBranch, deleteBranch, setBranchStatus, updateOrganization } from '../actions';
+import {
+  addBranch,
+  deleteBranch,
+  resetAdminPassword,
+  setBranchStatus,
+  updateOrganization,
+} from '../actions';
 import { ModuleSwitch } from './module-switch';
 import { StatusButton } from './status-button';
 
@@ -131,7 +139,7 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
 
       <h2 className="mb-3 mt-8 text-lg font-semibold">Branches</h2>
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
           <Table>
             <TableHead>
               <tr>
@@ -230,6 +238,7 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
             <Th>Email</Th>
             <Th>Status</Th>
             <Th>Last login</Th>
+            <Th />
           </tr>
         </TableHead>
         <tbody>
@@ -244,6 +253,13 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
               </Td>
               <Td className="text-muted-foreground">
                 {admin.lastLoginAt ? new Date(admin.lastLoginAt).toLocaleString() : 'Never'}
+              </Td>
+              <Td className="text-right">
+                <ResetPasswordButton
+                  name={admin.name}
+                  reset={resetAdminPassword.bind(null, org.id, admin.id)}
+                  variant="ghost"
+                />
               </Td>
             </tr>
           ))}
