@@ -103,7 +103,7 @@ export interface PredefinedRole {
 }
 
 /** What a form's server action returns: a message to show, or nothing. */
-export type { FormState, PermissionResource } from '@eduplatform/ui';
+export type { FormState, PermissionResource, ResetPasswordResult } from '@eduplatform/ui';
 
 /** One entry of the audit log, as the super admin sees it (ADR-0027). */
 export interface PlatformAuditEntry {

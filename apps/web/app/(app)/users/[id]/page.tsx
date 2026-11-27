@@ -2,9 +2,9 @@
  * /users/:id: one user, their roles and where each applies.
  *
  * With "access.user.update" at the right place you can give another role (e.g. Senior faculty
- * at a second branch), take a role away, rename or deactivate the user. Renaming and
- * deactivating affect the user everywhere, so the API allows them only if all the user's roles
- * are within your reach.
+ * at a second branch), take a role away, rename or deactivate the user, or reset a forgotten
+ * password. Renaming, deactivating and resetting the password affect the user everywhere, so the
+ * API allows them only if all the user's roles are within your reach.
  */
 import {
   ActionForm,
@@ -16,15 +16,17 @@ import {
   Field,
   Input,
   PageHeader,
+  ResetPasswordButton,
   Table,
   TableHead,
   Td,
   Th,
 } from '@eduplatform/ui';
+import Link from 'next/link';
 import { api } from '../../../../lib/api';
 import { can, canAt, getMe } from '../../../../lib/me';
 import type { Branch, Role, User } from '../../../../lib/types';
-import { addRole, removeRole, renameUser, setUserStatus } from '../actions';
+import { addRole, removeRole, renameUser, resetPassword, setUserStatus } from '../actions';
 import { PlaceSelect, placeLabel, RoleSelect } from '../place';
 
 export default async function UserPage({ params }: { params: Promise<{ id: string }> }) {
@@ -137,6 +139,33 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
             </p>
           </CardContent>
         </Card>
+
+        {managesWholeUser && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Password</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-start gap-3">
+              {user.id === me.id ? (
+                <p className="text-sm text-muted-foreground">
+                  You change your own password on the{' '}
+                  <Link href="/account" className="underline">
+                    Change password
+                  </Link>{' '}
+                  page.
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Forgot their password, or locked out after wrong tries? Give them a temporary
+                    one. They must change it when they log in.
+                  </p>
+                  <ResetPasswordButton name={user.name} reset={resetPassword.bind(null, user.id)} />
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </>
   );

@@ -33,12 +33,17 @@ export {
   CardTitle,
 } from './components/card';
 export { EmptyState, type EmptyStateProps } from './components/empty-state';
-export { Checkbox, Field, FileInput, Input, Label, Select } from './components/form';
+export { Checkbox, Field, FileInput, Input, Label, Select, Textarea } from './components/form';
 export {
   PermissionGrid,
   type PermissionGridProps,
   type PermissionResource,
 } from './components/permission-grid';
+export {
+  ResetPasswordButton,
+  type ResetPasswordButtonProps,
+  type ResetPasswordResult,
+} from './components/reset-password-button';
 export { Table, TableHead, Td, Th } from './components/table';
 
 // Page frame

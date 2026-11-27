@@ -2,12 +2,18 @@
  * /portal/students/:id : one child's (or the student's own) details and attendance of the last
  * 30 days: the percentage, the counts, and every day that wasn't "present" with the remark.
  * Only students linked to the login can be opened (the API answers 404 for any other).
+ * With the Evaluation module, the results of LOCKED exams too (ADR-0037), each opening its page.
  */
 import { Badge, Card, CardContent, CardHeader, CardTitle, PageHeader } from '@eduplatform/ui';
 import Link from 'next/link';
 import { api } from '../../../../lib/api';
 import { getMe } from '../../../../lib/me';
-import type { PortalAttendance, PortalStudent, StudentDocument } from '../../../../lib/types';
+import type {
+  PortalAttendance,
+  PortalExamResult,
+  PortalStudent,
+  StudentDocument,
+} from '../../../../lib/types';
 import { STATUS_LABEL } from '../../../(app)/attendance/labels';
 import { RELATIONS } from '../../../(app)/students/labels';
 
@@ -15,7 +21,7 @@ export default async function PortalStudentPage({ params }: { params: Promise<{ 
   const { id } = await params;
   if (!(await getMe()).enabledModules.includes('portal')) return null; // the layout explains
   const student = await api<PortalStudent>(`/portal/students/${id}`);
-  const me = await api<{ attendance: boolean }>('/portal/me');
+  const me = await api<{ attendance: boolean; results?: boolean }>('/portal/me');
   const to = new Date().toISOString().slice(0, 10);
   const from = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
   const attendance = me.attendance
@@ -24,6 +30,7 @@ export default async function PortalStudentPage({ params }: { params: Promise<{ 
       )
     : null;
   const documents = await api<StudentDocument[]>(`/portal/students/${id}/documents`);
+  const exams = me.results ? await api<PortalExamResult[]>(`/portal/students/${id}/exams`) : [];
   const current = student.placement;
 
   return (
@@ -103,6 +110,37 @@ export default async function PortalStudentPage({ params }: { params: Promise<{ 
           </Card>
         )}
       </div>
+
+      {me.results && (
+        <Card className="mt-6 max-w-xl">
+          <CardHeader>
+            <CardTitle>Exam results</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2 text-sm">
+            {exams.length === 0 && (
+              <p className="text-muted-foreground">No results published yet.</p>
+            )}
+            {exams.map((e) => (
+              <Link
+                key={e.exam.id}
+                href={`/portal/students/${id}/exams/${e.exam.id}`}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 hover:bg-muted/50"
+              >
+                <span>
+                  <span className="font-medium">{e.exam.name}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {e.exam.examType} · {e.exam.startsOn}
+                  </span>
+                </span>
+                <span className="flex items-center gap-2 tabular-nums">
+                  {e.percentage === null ? '—' : `${e.percentage}%`}
+                  {e.grade && <Badge variant="outline">{e.grade}</Badge>}
+                </span>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {documents.length > 0 && (
         <Card className="mt-6 max-w-xl">
