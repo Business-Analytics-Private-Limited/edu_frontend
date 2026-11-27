@@ -2,7 +2,7 @@
  * The shapes of the API's answers used by the web app.
  * See all of them in Swagger: http://localhost:3000/api/docs
  */
-export type { FormState, PermissionResource } from '@eduplatform/ui';
+export type { FormState, PermissionResource, ResetPasswordResult } from '@eduplatform/ui';
 
 /**
  * GET /auth/me: who is logged in, their roles, their permissions (everything any of their
