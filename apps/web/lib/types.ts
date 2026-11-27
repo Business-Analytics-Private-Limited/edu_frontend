@@ -603,3 +603,172 @@ export interface StudentDocuments {
   /** Required types without an (accepted) document yet. */
   missing: { id: string; name: string }[];
 }
+
+// --- Evaluation (backend ADR-0035) ---------------------------------------------------------------
+
+export interface ExamType {
+  id: string;
+  name: string;
+  code: string;
+  description: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  examCount: number;
+}
+
+export type ExamStatus = 'OPEN' | 'LOCKED';
+export type MarkStatus = 'PRESENT' | 'ABSENT' | 'EXEMPT';
+
+export interface ExamListItem {
+  id: string;
+  name: string;
+  examType: { name: string; code: string };
+  academicYear: { id: string; name: string };
+  appliesTo: { classId: string; label: string };
+  /** null = every branch. */
+  branch: { id: string; name: string } | null;
+  startsOn: string;
+  endsOn: string;
+  status: ExamStatus;
+  subjectCount: number;
+  marksEntered: number;
+}
+
+export interface ExamSubjectInfo {
+  examSubjectId: string;
+  subjectId: string;
+  code: string;
+  name: string;
+  maxMarks: number;
+  passMarks: number;
+  examDate: string | null;
+  /** What the exam covers in this subject ("Ch 1-4, Trigonometry"). */
+  portion: string | null;
+}
+
+/** GET /exams/subject-options: the subjects of the part of the structure chosen for an exam. */
+export interface ExamSubjectOptions {
+  appliesTo: { classId: string; label: string };
+  /** How many active sections take part. */
+  sections: number;
+  /** Sections with no subjects attached yet: they take every subject of the exam. */
+  sectionsWithoutSubjects: number;
+  /** Subjects attached to those sections (or classes above them). */
+  subjects: {
+    id: string;
+    code: string;
+    name: string;
+    /** How many of the sections have it. */
+    sections: number;
+    /** Where it is attached, e.g. "Junior (1st Year) › BiPC". */
+    attachedTo: string[];
+  }[];
+  /** The organization's other active subjects. */
+  otherSubjects: { id: string; code: string; name: string }[];
+}
+
+export interface ExamDetail {
+  id: string;
+  name: string;
+  examType: { id: string; name: string; code: string };
+  academicYear: { id: string; name: string };
+  appliesTo: { classId: string; label: string };
+  branch: { id: string; name: string } | null;
+  startsOn: string;
+  endsOn: string;
+  status: ExamStatus;
+  subjects: ExamSubjectInfo[];
+  sections: {
+    id: string;
+    label: string;
+    branchId: string;
+    branchName: string;
+    /** The exam's subjects this section has. */
+    subjectIds: string[];
+    students: number;
+    marksExpected: number;
+    marksEntered: number;
+    canEnter: boolean;
+  }[];
+  uploadCount: number;
+}
+
+export interface MarkCell {
+  status: MarkStatus;
+  marks: number | null;
+}
+
+export interface MarksGrid {
+  exam: { id: string; name: string; status: ExamStatus };
+  section: { id: string; label: string; branchId: string };
+  subjects: ExamSubjectInfo[];
+  canEnter: boolean;
+  students: {
+    studentId: string;
+    admissionNo: string;
+    fullName: string;
+    rollNo: string | null;
+    /** subject id -> mark */
+    marks: Record<string, MarkCell>;
+  }[];
+}
+
+export interface MarksUploadResult {
+  totalRows: number;
+  readyRows: number;
+  marksToSave: number;
+  saved: number;
+  excluded: {
+    row: number;
+    admissionNo: string | null;
+    reasons: string[];
+    values: Record<string, string>;
+  }[];
+  subjects: string[];
+  unknownColumns: string[];
+  upload: { id: string; code: string } | null;
+}
+
+export interface MarksUpload {
+  id: string;
+  code: string;
+  number: number;
+  examId: string;
+  fileName: string | null;
+  totalRows: number;
+  savedCount: number;
+  excludedCount: number;
+  uploadedByName: string;
+  createdAt: string;
+  excludedRows?: MarksUploadResult['excluded'];
+  exam?: { id: string; name: string };
+}
+
+export interface ExamResults {
+  exam: { id: string; name: string; status: ExamStatus };
+  subjects: ExamSubjectInfo[];
+  sections: { id: string; label: string; branchId: string }[];
+  summary: {
+    students: number;
+    passed: number;
+    failed: number;
+    incomplete: number;
+    averagePercentage: number | null;
+  };
+  students: {
+    studentId: string;
+    admissionNo: string;
+    fullName: string;
+    rollNo: string | null;
+    section: { id: string; label: string };
+    /** The student's subjects in this exam (their section's, plus any with a mark). */
+    subjectIds: string[];
+    marks: Record<string, MarkCell>;
+    total: number;
+    maxTotal: number;
+    percentage: number | null;
+    result: 'PASS' | 'FAIL' | 'INCOMPLETE';
+    sectionRank: number | null;
+    examRank: number | null;
+  }[];
+}
