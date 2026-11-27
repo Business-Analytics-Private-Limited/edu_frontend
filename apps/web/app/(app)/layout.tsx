@@ -6,6 +6,7 @@
  */
 import { AppShell, Button, UserBadge, type NavItem } from '@eduplatform/ui';
 import {
+  Award,
   BarChart3,
   ArrowUpRight,
   BookOpen,
@@ -16,6 +17,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   FileSpreadsheet,
+  FileText,
   GraduationCap,
   History,
   KeyRound,
@@ -23,6 +25,7 @@ import {
   LayoutDashboard,
   LogOut,
   Network,
+  PieChart,
   Settings,
   ShieldCheck,
   Star,
@@ -134,6 +137,24 @@ const EVALUATION_MENU: (NavItem & { permission: string })[] = [
     href: '/evaluation/exam-types',
     label: 'Exam types',
     icon: <ClipboardList />,
+    permission: 'evaluation.settings.update',
+  },
+  {
+    href: '/evaluation/overview',
+    label: 'Exam overview',
+    icon: <PieChart />,
+    permission: 'evaluation.marks.view',
+  },
+  {
+    href: '/evaluation/grading',
+    label: 'Grades',
+    icon: <Award />,
+    permission: 'evaluation.settings.update',
+  },
+  {
+    href: '/evaluation/report-cards',
+    label: 'Report cards',
+    icon: <FileText />,
     permission: 'evaluation.settings.update',
   },
 ];

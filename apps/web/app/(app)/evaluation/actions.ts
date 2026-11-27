@@ -5,7 +5,7 @@
  */
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { api, errorMessage } from '../../../lib/api';
+import { api, apiUpload, errorMessage } from '../../../lib/api';
 import { readCsv } from '../../../lib/csv';
 import { flash } from '../../../lib/flash';
 import type { FormState, MarksUploadResult } from '../../../lib/types';
@@ -70,6 +70,8 @@ export async function createExam(_previous: FormState, form: FormData): Promise<
       passMarks: Number(text(form, `pass_${id}`)),
       examDate: text(form, `date_${id}`),
       portion: text(form, `portion_${id}`),
+      // Ticked syllabus chapters of this subject (ADR-0036).
+      chapterIds: form.getAll(`chapter_${id}`).map(String),
     }));
   if (subjects.length === 0) return { error: 'Tick at least one subject' };
   const bad = subjects.find((s) => !Number.isFinite(s.maxMarks) || !Number.isFinite(s.passMarks));
@@ -87,6 +89,7 @@ export async function createExam(_previous: FormState, form: FormData): Promise<
         branchId: text(form, 'branchId'),
         startsOn: text(form, 'startsOn'),
         endsOn: text(form, 'endsOn'),
+        gradingSchemeId: text(form, 'gradingSchemeId'),
         subjects,
       },
     });
@@ -220,4 +223,145 @@ export async function uploadMarks(
     `${result.upload.code}: saved marks of ${result.readyRows} student(s)${result.excluded.length ? `, ${result.excluded.length} row(s) left out` : ''}`,
   );
   redirect(`/evaluation/uploads/${result.upload.id}`);
+}
+
+// --- Part 2 (ADR-0036): grades, report cards ----------------------------------------------------
+
+/** The grades an exam uses: a scheme id, or "" for the organization's default. */
+export async function setExamScheme(
+  examId: string,
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  try {
+    await api(`/exams/${examId}`, {
+      method: 'PATCH',
+      body: { gradingSchemeId: text(form, 'gradingSchemeId') ?? null },
+    });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath(`/evaluation/exams/${examId}`);
+  return { success: 'Grades changed' };
+}
+
+/**
+ * The bands of a grading scheme, typed one per line: "grade, from %, grade point, remark", e.g.
+ * "A+, 90, 10, Outstanding". Grade point and remark are optional.
+ */
+function readBands(raw: string | undefined) {
+  const problems: string[] = [];
+  const bands = (raw ?? '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, i) => {
+      const [grade, from, point, ...remark] = line.split(',').map((p) => p.trim());
+      const minPercentage = Number(from);
+      const gradePoint = point ? Number(point) : undefined;
+      if (!grade || !Number.isFinite(minPercentage) || (point && !Number.isFinite(gradePoint))) {
+        problems.push(`line ${i + 1} ("${line}")`);
+      }
+      return { grade, minPercentage, gradePoint, remark: remark.join(', ') || undefined };
+    });
+  return { bands, problems };
+}
+
+export async function saveGradingScheme(
+  id: string | null,
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  const { bands, problems } = readBands(text(form, 'bands'));
+  if (problems.length > 0)
+    return {
+      error: `Write each grade as "grade, from %, grade point, remark": check ${problems.join(', ')}`,
+    };
+  if (bands.length < 2) return { error: 'Give at least two grades, one of them from 0 %' };
+  try {
+    await api(id ? `/grading-schemes/${id}` : '/grading-schemes', {
+      method: id ? 'PATCH' : 'POST',
+      body: {
+        name: text(form, 'name'),
+        isDefault: form.get('isDefault') === 'on' ? true : undefined,
+        bands,
+      },
+    });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath('/evaluation/grading');
+  if (id) return { success: 'Grading scheme saved' };
+  await flash('Grading scheme added');
+  redirect('/evaluation/grading');
+}
+
+export async function makeSchemeDefault(id: string): Promise<FormState> {
+  try {
+    await api(`/grading-schemes/${id}`, { method: 'PATCH', body: { isDefault: true } });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath('/evaluation/grading');
+  return { success: 'Now the default: exams without their own scheme use it' };
+}
+
+export async function deleteGradingScheme(id: string): Promise<FormState> {
+  try {
+    await api(`/grading-schemes/${id}`, { method: 'DELETE' });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath('/evaluation/grading');
+  return { success: 'Grading scheme deleted' };
+}
+
+export async function saveReportCardSettings(
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  const signatures = (text(form, 'signatureLabels') ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (signatures.length > 4) return { error: 'At most four signatures' };
+  try {
+    await api('/report-card-settings', {
+      method: 'PUT',
+      body: {
+        title: text(form, 'title'),
+        headerLine: text(form, 'headerLine') ?? '',
+        footerNote: text(form, 'footerNote') ?? '',
+        signatureLabels: signatures,
+      },
+    });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath('/evaluation/report-cards');
+  return { success: 'Report card settings saved' };
+}
+
+export async function uploadLogo(_previous: FormState, form: FormData): Promise<FormState> {
+  const file = form.get('file');
+  if (!(file instanceof File) || file.size === 0) return { error: 'Choose a PNG or JPG file' };
+  const upload = new FormData();
+  upload.set('file', file);
+  try {
+    await apiUpload('/report-card-settings/logo', upload, 'PUT');
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath('/evaluation/report-cards');
+  return { success: 'Logo saved: it appears on every report card' };
+}
+
+export async function removeLogo(): Promise<FormState> {
+  try {
+    await api('/report-card-settings/logo', { method: 'DELETE' });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  revalidatePath('/evaluation/report-cards');
+  return { success: 'Logo removed' };
 }

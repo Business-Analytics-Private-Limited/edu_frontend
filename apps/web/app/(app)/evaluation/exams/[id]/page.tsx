@@ -2,7 +2,9 @@
  * /evaluation/exams/:id: one exam (backend ADR-0035): where it applies, its subjects with
  * maximum and pass marks, and every section taking part with its students and how many marks are
  * in. From here: enter a section's marks, upload a CSV of marks, see results, lock / unlock.
- * Upload records of this exam are listed at the bottom.
+ * Upload records of this exam are listed at the bottom. Part 2 (ADR-0036): the chapters each
+ * subject covers, the grades used (changeable), the overview and the report cards (one PDF for the
+ * exam or per section).
  */
 import {
   ActionForm,
@@ -12,18 +14,20 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Field,
   PageHeader,
+  Select,
   Table,
   TableHead,
   Td,
   Th,
 } from '@eduplatform/ui';
-import { BarChart3, Upload } from 'lucide-react';
+import { BarChart3, FileText, PieChart, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { api } from '../../../../../lib/api';
 import { can, canAt, getMe } from '../../../../../lib/me';
-import type { ExamDetail, MarksUpload } from '../../../../../lib/types';
-import { deleteExam, setExamLocked } from '../../actions';
+import type { ExamDetail, GradingScheme, MarksUpload } from '../../../../../lib/types';
+import { deleteExam, setExamLocked, setExamScheme } from '../../actions';
 
 export default async function ExamPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -32,7 +36,9 @@ export default async function ExamPage({ params }: { params: Promise<{ id: strin
   const uploads = can(me, 'evaluation.marks.view')
     ? await api<MarksUpload[]>(`/exams/${id}/uploads`)
     : [];
+  const schemes = await api<GradingScheme[]>('/grading-schemes');
   const place = { branchId: exam.branch?.id };
+  const canSeeMarks = can(me, 'evaluation.marks.view');
   const canUpdate = canAt(me, 'evaluation.exam.update', place);
   const marksIn = exam.sections.reduce((n, s) => n + s.marksEntered, 0);
   const marksExpected = exam.sections.reduce((n, s) => n + s.marksExpected, 0);
@@ -63,6 +69,21 @@ export default async function ExamPage({ params }: { params: Promise<{ id: strin
                 <BarChart3 /> Results
               </Link>
             </Button>
+            {canSeeMarks && (
+              <Button asChild variant="outline">
+                <Link href={`/evaluation/exams/${id}/overview`}>
+                  <PieChart /> Overview
+                </Link>
+              </Button>
+            )}
+            {canSeeMarks && (
+              <Button asChild variant="outline">
+                {/* One PDF, a page per student the user may see (route handler). */}
+                <a href={`/evaluation/exams/${id}/report-cards`}>
+                  <FileText /> Report cards
+                </a>
+              </Button>
+            )}
             {canUpdate && (
               <ActionForm
                 action={setExamLocked.bind(null, id, open)}
@@ -111,12 +132,49 @@ export default async function ExamPage({ params }: { params: Promise<{ id: strin
                       Portion: {s.portion}
                     </span>
                   )}
+                  {s.chapters.length > 0 && (
+                    <span className="block text-xs text-muted-foreground">
+                      Chapters: {s.chapters.map((c) => c.name).join(', ')}
+                    </span>
+                  )}
                 </span>
                 <span className="whitespace-nowrap tabular-nums">
                   max {s.maxMarks} · pass {s.passMarks}
                 </span>
               </div>
             ))}
+            <div className="mt-2 border-t pt-3">
+              <p className="font-medium">Grades</p>
+              <p className="text-xs text-muted-foreground">
+                {exam.gradingScheme
+                  ? `${exam.gradingScheme.name}${exam.gradingScheme.own ? '' : ' (the default)'}`
+                  : 'None: marks and percentages only (add grades in Evaluation → Grades)'}
+              </p>
+              {canUpdate && schemes.length > 0 && (
+                <ActionForm
+                  action={setExamScheme.bind(null, id)}
+                  submitLabel="Change grades"
+                  submitVariant="outline"
+                  submitSize="sm"
+                  className="mt-2 gap-2"
+                >
+                  <Field label="Grades used" htmlFor="gradingSchemeId">
+                    <Select
+                      id="gradingSchemeId"
+                      name="gradingSchemeId"
+                      defaultValue={exam.gradingScheme?.own ? exam.gradingScheme.id : ''}
+                    >
+                      <option value="">The default</option>
+                      {schemes.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </ActionForm>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -158,12 +216,19 @@ export default async function ExamPage({ params }: { params: Promise<{ id: strin
                     {s.marksEntered} / {s.marksExpected}
                   </Td>
                   <Td className="text-right">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex flex-wrap justify-end gap-1">
                       {canAt(me, 'evaluation.marks.view', { branchId: s.branchId }) && (
                         <Button asChild variant={s.canEnter ? 'default' : 'outline'} size="sm">
                           <Link href={`/evaluation/exams/${id}/marks?sectionId=${s.id}`}>
                             {s.canEnter ? 'Enter marks' : 'View marks'}
                           </Link>
+                        </Button>
+                      )}
+                      {canAt(me, 'evaluation.marks.view', { branchId: s.branchId }) && (
+                        <Button asChild variant="outline" size="sm">
+                          <a href={`/evaluation/exams/${id}/report-cards?sectionId=${s.id}`}>
+                            Report cards
+                          </a>
                         </Button>
                       )}
                     </div>

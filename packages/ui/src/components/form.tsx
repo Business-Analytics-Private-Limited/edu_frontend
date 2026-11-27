@@ -27,6 +27,11 @@ export function Input({ className, ...props }: ComponentProps<'input'>) {
   return <input className={cn(fieldStyles, className)} {...props} />;
 }
 
+/** A box for several lines of text, e.g. one chapter or one grade per line. */
+export function Textarea({ className, ...props }: ComponentProps<'textarea'>) {
+  return <textarea className={cn(fieldStyles, 'h-auto py-2 sm:h-auto', className)} {...props} />;
+}
+
 /**
  * A file field that looks like the other fields, with a "Choose file" button inside:
  *   <FileInput id="file" name="file" accept=".csv" required />

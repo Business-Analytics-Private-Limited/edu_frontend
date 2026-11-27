@@ -562,6 +562,8 @@ export interface PortalMe {
   name: string;
   kind: 'parent' | 'student';
   attendance: boolean;
+  /** The Evaluation module is on: results of locked exams (ADR-0036). */
+  results?: boolean;
   students: PortalStudent[];
 }
 
@@ -644,6 +646,8 @@ export interface ExamSubjectInfo {
   examDate: string | null;
   /** What the exam covers in this subject ("Ch 1-4, Trigonometry"). */
   portion: string | null;
+  /** The syllabus chapters the exam covers in this subject (ADR-0036), in syllabus order. */
+  chapters: { id: string; name: string }[];
 }
 
 /** GET /exams/subject-options: the subjects of the part of the structure chosen for an exam. */
@@ -662,9 +666,16 @@ export interface ExamSubjectOptions {
     sections: number;
     /** Where it is attached, e.g. "Junior (1st Year) › BiPC". */
     attachedTo: string[];
+    /** The subject's syllabus chapters in use, to tick. */
+    chapters: { id: string; name: string }[];
   }[];
   /** The organization's other active subjects. */
-  otherSubjects: { id: string; code: string; name: string }[];
+  otherSubjects: {
+    id: string;
+    code: string;
+    name: string;
+    chapters: { id: string; name: string }[];
+  }[];
 }
 
 export interface ExamDetail {
@@ -677,6 +688,8 @@ export interface ExamDetail {
   startsOn: string;
   endsOn: string;
   status: ExamStatus;
+  /** The grades used: the exam's own (`own`) or the organization's default; null = no grades. */
+  gradingScheme: { id: string; name: string; own: boolean } | null;
   subjects: ExamSubjectInfo[];
   sections: {
     id: string;
@@ -746,6 +759,7 @@ export interface MarksUpload {
 
 export interface ExamResults {
   exam: { id: string; name: string; status: ExamStatus };
+  gradingScheme: GradingScheme | null;
   subjects: ExamSubjectInfo[];
   sections: { id: string; label: string; branchId: string }[];
   summary: {
@@ -768,7 +782,119 @@ export interface ExamResults {
     maxTotal: number;
     percentage: number | null;
     result: 'PASS' | 'FAIL' | 'INCOMPLETE';
+    /** subject id -> grade (ADR-0036); empty without a grading scheme. */
+    subjectGrades: Record<string, string>;
+    grade: string | null;
+    gpa: number | null;
     sectionRank: number | null;
     examRank: number | null;
   }[];
+}
+
+// --- Evaluation part 2 (backend ADR-0036) --------------------------------------------------------
+
+export interface GradingBand {
+  grade: string;
+  minPercentage: number;
+  gradePoint: number | null;
+  remark: string | null;
+}
+
+/** GET /grading-schemes; bands highest first. */
+export interface GradingScheme {
+  id: string;
+  name: string;
+  bands: GradingBand[];
+  isDefault?: boolean;
+  examCount?: number;
+}
+
+/** GET /report-card-settings */
+export interface ReportCardSettings {
+  title: string;
+  headerLine: string | null;
+  footerNote: string | null;
+  signatureLabels: string[];
+  hasLogo: boolean;
+}
+
+/** GET /subjects/:id/chapters */
+export interface SubjectChapters {
+  subject: { id: string; code: string; name: string };
+  chapters: { id: string; name: string; sortOrder: number; isActive: boolean }[];
+}
+
+export interface OverviewSummary {
+  students: number;
+  passed: number;
+  failed: number;
+  incomplete: number;
+  passPercentage: number | null;
+  averagePercentage: number | null;
+  highestPercentage: number | null;
+  toppers: {
+    studentId: string;
+    fullName: string;
+    admissionNo: string;
+    percentage: number | null;
+    examRank: number | null;
+  }[];
+}
+
+/** GET /exams/:id/overview */
+export interface ExamOverview {
+  exam: { id: string; name: string; status: ExamStatus };
+  everything: OverviewSummary;
+  byBranch: (OverviewSummary & { id: string; label: string })[];
+  byGroup: (OverviewSummary & { id: string; label: string })[];
+  bySection: (OverviewSummary & { id: string; label: string })[];
+  subjects: {
+    subjectId: string;
+    code: string;
+    name: string;
+    maxMarks: number;
+    students: number;
+    averagePercentage: number | null;
+    passPercentage: number | null;
+    highest: number | null;
+  }[];
+  weakSubjects: ExamOverview['subjects'];
+  gradeSpread: { grade: string; students: number }[] | null;
+}
+
+/** GET /exam-overview?academicYearId= */
+export interface YearOverviewRow {
+  id: string;
+  name: string;
+  examType: { name: string; code: string };
+  startsOn: string;
+  status: ExamStatus;
+  students: number;
+  passed: number;
+  failed: number;
+  incomplete: number;
+  passPercentage: number | null;
+  averagePercentage: number | null;
+}
+
+/** GET /portal/students/:id/exams/:examId (the list leaves out `subjects`). */
+export interface PortalExamResult {
+  exam: { id: string; name: string; examType: string; startsOn: string; endsOn: string };
+  section: string;
+  subjects?: {
+    code: string;
+    name: string;
+    maxMarks: number;
+    passMarks: number;
+    status: MarkStatus | null;
+    marks: number | null;
+    grade: string | null;
+  }[];
+  total: number;
+  maxTotal: number;
+  percentage: number | null;
+  result: 'PASS' | 'FAIL' | 'INCOMPLETE';
+  grade: string | null;
+  gpa: number | null;
+  sectionRank: number | null;
 }

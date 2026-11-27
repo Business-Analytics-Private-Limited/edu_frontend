@@ -339,6 +339,76 @@ export async function setClassSubjects(
   );
 }
 
+// --- Syllabus chapters (backend ADR-0036) -------------------------------------------------------
+
+/** One chapter per line in the "names" box, added at the end of the syllabus. */
+export async function addChapters(
+  subjectId: string,
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  const names = text(form, 'names')
+    .split(/\r?\n/)
+    .map((n) => n.trim())
+    .filter(Boolean);
+  if (names.length === 0) return { error: 'Write at least one chapter, one per line' };
+  return run(
+    `/academic/subjects/${subjectId}/chapters`,
+    () => api(`/subjects/${subjectId}/chapters`, { method: 'POST', body: { names } }),
+    names.length === 1 ? 'Chapter added' : `${names.length} chapters added`,
+  );
+}
+
+export async function renameChapter(
+  subjectId: string,
+  chapterId: string,
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  return run(
+    `/academic/subjects/${subjectId}/chapters`,
+    () => api(`/chapters/${chapterId}`, { method: 'PATCH', body: { name: text(form, 'name') } }),
+    'Chapter renamed',
+  );
+}
+
+export async function setChapterInUse(
+  subjectId: string,
+  chapterId: string,
+  isActive: boolean,
+): Promise<FormState> {
+  return run(
+    `/academic/subjects/${subjectId}/chapters`,
+    () => api(`/chapters/${chapterId}`, { method: 'PATCH', body: { isActive } }),
+    isActive ? 'Chapter in use again' : 'Chapter no longer offered for new exams',
+  );
+}
+
+export async function deleteChapter(subjectId: string, chapterId: string): Promise<FormState> {
+  return run(
+    `/academic/subjects/${subjectId}/chapters`,
+    () => api(`/chapters/${chapterId}`, { method: 'DELETE' }),
+    'Chapter deleted',
+  );
+}
+
+/** Moves a chapter one place up or down: sends the whole new order. */
+export async function moveChapter(
+  subjectId: string,
+  order: string[],
+  index: number,
+  by: -1 | 1,
+): Promise<FormState> {
+  const chapterIds = [...order];
+  const [moved] = chapterIds.splice(index, 1);
+  chapterIds.splice(index + by, 0, moved);
+  return run(
+    `/academic/subjects/${subjectId}/chapters`,
+    () => api(`/subjects/${subjectId}/chapters/order`, { method: 'PUT', body: { chapterIds } }),
+    'Order saved',
+  );
+}
+
 // --- Calendar ------------------------------------------------------------------------------------
 
 /** The ticked weekday checkboxes all have name="days" (0 = Sunday ... 6 = Saturday). */
