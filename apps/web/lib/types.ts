@@ -642,6 +642,29 @@ export interface ExamSubjectInfo {
   maxMarks: number;
   passMarks: number;
   examDate: string | null;
+  /** What the exam covers in this subject ("Ch 1-4, Trigonometry"). */
+  portion: string | null;
+}
+
+/** GET /exams/subject-options: the subjects of the part of the structure chosen for an exam. */
+export interface ExamSubjectOptions {
+  appliesTo: { classId: string; label: string };
+  /** How many active sections take part. */
+  sections: number;
+  /** Sections with no subjects attached yet: they take every subject of the exam. */
+  sectionsWithoutSubjects: number;
+  /** Subjects attached to those sections (or classes above them). */
+  subjects: {
+    id: string;
+    code: string;
+    name: string;
+    /** How many of the sections have it. */
+    sections: number;
+    /** Where it is attached, e.g. "Junior (1st Year) › BiPC". */
+    attachedTo: string[];
+  }[];
+  /** The organization's other active subjects. */
+  otherSubjects: { id: string; code: string; name: string }[];
 }
 
 export interface ExamDetail {
@@ -660,6 +683,8 @@ export interface ExamDetail {
     label: string;
     branchId: string;
     branchName: string;
+    /** The exam's subjects this section has. */
+    subjectIds: string[];
     students: number;
     marksExpected: number;
     marksEntered: number;
@@ -736,6 +761,8 @@ export interface ExamResults {
     fullName: string;
     rollNo: string | null;
     section: { id: string; label: string };
+    /** The student's subjects in this exam (their section's, plus any with a mark). */
+    subjectIds: string[];
     marks: Record<string, MarkCell>;
     total: number;
     maxTotal: number;

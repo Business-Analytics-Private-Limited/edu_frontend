@@ -3,6 +3,7 @@
  * Columns: admissionNo, name, section (name and section are only there to help, and ignored on
  * upload), then one column per subject code. One row per student of the exam that the user may
  * see (or of one section), with the marks already entered, so the file can also fix marks.
+ * A subject the student's section doesn't have is "-" (the upload leaves it as it is).
  */
 import { api } from '../../../../../../lib/api';
 import { csvLine } from '../../../../../../lib/csv';
@@ -36,7 +37,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         s.admissionNo,
         s.fullName,
         s.section.label,
-        ...results.subjects.map((sub) => shown(s.marks[sub.subjectId])),
+        // "-" = not a subject of the student's section (left as it is on upload).
+        ...results.subjects.map((sub) =>
+          s.subjectIds.includes(sub.subjectId) ? shown(s.marks[sub.subjectId]) : '-',
+        ),
       ]),
     ),
   ];

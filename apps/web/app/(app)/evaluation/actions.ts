@@ -57,8 +57,8 @@ export async function deleteExamType(id: string): Promise<FormState> {
 // --- Exams ---------------------------------------------------------------------------------------
 
 /**
- * The New exam form. Subjects come as one row per subject: subject_<id> (ticked), max_<id>,
- * pass_<id>, date_<id>.
+ * The New exam form. Subjects come as one row per subject: subject (ticked), max_<id>,
+ * pass_<id>, date_<id>, portion_<id>.
  */
 export async function createExam(_previous: FormState, form: FormData): Promise<FormState> {
   const subjects = form
@@ -69,6 +69,7 @@ export async function createExam(_previous: FormState, form: FormData): Promise<
       maxMarks: Number(text(form, `max_${id}`)),
       passMarks: Number(text(form, `pass_${id}`)),
       examDate: text(form, `date_${id}`),
+      portion: text(form, `portion_${id}`),
     }));
   if (subjects.length === 0) return { error: 'Tick at least one subject' };
   const bad = subjects.find((s) => !Number.isFinite(s.maxMarks) || !Number.isFinite(s.passMarks));

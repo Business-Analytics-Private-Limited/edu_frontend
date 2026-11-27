@@ -86,7 +86,8 @@ export default async function UploadMarksPage({ params }: { params: Promise<{ id
               </li>
               <li>
                 A number up to the subject&apos;s maximum, <code>AB</code> for absent,{' '}
-                <code>EX</code> for exempt. An empty box keeps the mark as it is.
+                <code>EX</code> for exempt. An empty box keeps the mark as it is; <code>-</code>{' '}
+                marks a subject the student&apos;s section doesn&apos;t have.
               </li>
               <li>
                 Rows with a problem are left out and listed with the reason; the others are saved.

@@ -143,7 +143,12 @@ export default async function ResultsPage({
                     key={sub.subjectId}
                     className={`text-right tabular-nums ${low ? 'font-medium text-destructive' : ''}`}
                   >
-                    {shown(cell)}
+                    {/* "n/a": not a subject of the student's section. */}
+                    {st.subjectIds.includes(sub.subjectId) ? (
+                      shown(cell)
+                    ) : (
+                      <span className="text-xs text-muted-foreground">n/a</span>
+                    )}
                   </Td>
                 );
               })}

@@ -106,6 +106,11 @@ export default async function ExamPage({ params }: { params: Promise<{ id: strin
                   {s.examDate && (
                     <span className="block text-xs text-muted-foreground">{s.examDate}</span>
                   )}
+                  {s.portion && (
+                    <span className="block text-xs text-muted-foreground">
+                      Portion: {s.portion}
+                    </span>
+                  )}
                 </span>
                 <span className="whitespace-nowrap tabular-nums">
                   max {s.maxMarks} · pass {s.passMarks}
@@ -137,6 +142,16 @@ export default async function ExamPage({ params }: { params: Promise<{ id: strin
                   <Td>
                     {s.label}
                     <span className="block text-xs text-muted-foreground">{s.branchName}</span>
+                    {/* Only when the section doesn't have every subject of the exam. */}
+                    {s.subjectIds.length < exam.subjects.length && (
+                      <span className="block text-xs text-muted-foreground">
+                        Subjects:{' '}
+                        {exam.subjects
+                          .filter((sub) => s.subjectIds.includes(sub.subjectId))
+                          .map((sub) => sub.code)
+                          .join(', ') || 'none'}
+                      </span>
+                    )}
                   </Td>
                   <Td className="text-right tabular-nums">{s.students}</Td>
                   <Td className="text-right tabular-nums">
