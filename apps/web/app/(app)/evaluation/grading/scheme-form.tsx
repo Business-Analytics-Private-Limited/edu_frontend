@@ -1,6 +1,6 @@
 /**
  * The form for a grading scheme (new or edit): a name, "default" and the bands, typed one per
- * line as "grade, from %, grade point, remark" (backend ADR-0036). A text box keeps the form
+ * line as "grade, from %, grade point, remark" (backend ADR-0037). A text box keeps the form
  * simple and works on a phone; the server action reads and checks the lines.
  */
 import { ActionForm, Checkbox, Field, Input, Textarea } from '@eduplatform/ui';

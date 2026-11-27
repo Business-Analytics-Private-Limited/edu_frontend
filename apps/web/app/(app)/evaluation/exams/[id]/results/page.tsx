@@ -3,7 +3,7 @@
  * section the user may see or one section: each student's marks, total, percentage, PASS / FAIL
  * / INCOMPLETE, and ranks in the section and in the whole exam (1, 2, 2, 4 for ties). Exempt
  * subjects don't count; absent, or below the pass marks, in a subject is a FAIL.
- * With a grading scheme (ADR-0036) each mark shows its grade, plus the overall grade and GPA.
+ * With a grading scheme (ADR-0037) each mark shows its grade, plus the overall grade and GPA.
  * Each student's report card is a PDF; "Report cards" gives the shown students in one PDF.
  */
 import {

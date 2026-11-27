@@ -5,7 +5,7 @@
  *      group, a stream, or one section.
  *   2. The exam: type, academic year, name (unique in the year), dates inside the year, and the
  *      subjects, each with maximum and pass marks, an optional date and an optional portion
- *      ("Ch 1-4") with the syllabus chapters it covers ticked (ADR-0036), and the grades to use
+ *      ("Ch 1-4") with the syllabus chapters it covers ticked (ADR-0037), and the grades to use
  *      (the default grading scheme unless another is chosen). The subjects offered are those attached to the chosen part (Academic →
  *      subjects of a class), ticked; the organization's other subjects are folded away below.
  * Every active section under the chosen part takes part, and each section is expected to have

@@ -1,5 +1,5 @@
 /**
- * /evaluation/grading: the organization's grading schemes (backend ADR-0036). A scheme turns a
+ * /evaluation/grading: the organization's grading schemes (backend ADR-0037). A scheme turns a
  * percentage into a grade (A+, A, B …) and, when every grade has a point, a GPA. One scheme is
  * the default; an exam can use another one. A scheme that exams use can't be deleted.
  */

@@ -562,7 +562,7 @@ export interface PortalMe {
   name: string;
   kind: 'parent' | 'student';
   attendance: boolean;
-  /** The Evaluation module is on: results of locked exams (ADR-0036). */
+  /** The Evaluation module is on: results of locked exams (ADR-0037). */
   results?: boolean;
   students: PortalStudent[];
 }
@@ -646,7 +646,7 @@ export interface ExamSubjectInfo {
   examDate: string | null;
   /** What the exam covers in this subject ("Ch 1-4, Trigonometry"). */
   portion: string | null;
-  /** The syllabus chapters the exam covers in this subject (ADR-0036), in syllabus order. */
+  /** The syllabus chapters the exam covers in this subject (ADR-0037), in syllabus order. */
   chapters: { id: string; name: string }[];
 }
 
@@ -782,7 +782,7 @@ export interface ExamResults {
     maxTotal: number;
     percentage: number | null;
     result: 'PASS' | 'FAIL' | 'INCOMPLETE';
-    /** subject id -> grade (ADR-0036); empty without a grading scheme. */
+    /** subject id -> grade (ADR-0037); empty without a grading scheme. */
     subjectGrades: Record<string, string>;
     grade: string | null;
     gpa: number | null;
@@ -791,7 +791,7 @@ export interface ExamResults {
   }[];
 }
 
-// --- Evaluation part 2 (backend ADR-0036) --------------------------------------------------------
+// --- Evaluation part 2 (backend ADR-0037) --------------------------------------------------------
 
 export interface GradingBand {
   grade: string;

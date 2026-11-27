@@ -1,6 +1,6 @@
 /**
  * /evaluation/exams/:id/report-cards?sectionId=&branchId=: report cards in one PDF (backend
- * ADR-0036), a page per student: one section, one branch, or every section the user may see.
+ * ADR-0037), a page per student: one section, one branch, or every section the user may see.
  * The token stays on the server; the PDF is passed through.
  */
 import { apiDownload } from '../../../../../../lib/api';

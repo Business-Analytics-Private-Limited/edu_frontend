@@ -339,7 +339,7 @@ export async function setClassSubjects(
   );
 }
 
-// --- Syllabus chapters (backend ADR-0036) -------------------------------------------------------
+// --- Syllabus chapters (backend ADR-0037) -------------------------------------------------------
 
 /** One chapter per line in the "names" box, added at the end of the syllabus. */
 export async function addChapters(

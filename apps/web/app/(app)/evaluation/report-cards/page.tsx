@@ -1,5 +1,5 @@
 /**
- * /evaluation/report-cards: how report cards look (backend ADR-0036): the title, a line under the
+ * /evaluation/report-cards: how report cards look (backend ADR-0037): the title, a line under the
  * organization's name, a note at the bottom, the signature lines and the logo. Report cards are
  * printed from an exam's page or results (one student, a section, or every section).
  */

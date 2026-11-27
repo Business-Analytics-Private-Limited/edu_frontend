@@ -1,5 +1,5 @@
 /**
- * /evaluation/exams/:id/overview: how an exam went (backend ADR-0036), over the students the
+ * /evaluation/exams/:id/overview: how an exam went (backend ADR-0037), over the students the
  * user may see: pass % and averages for the whole exam, per branch, per group and per section;
  * each subject's average and pass %, the weakest subjects, the toppers and the grade spread.
  */

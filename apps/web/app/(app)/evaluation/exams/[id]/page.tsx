@@ -2,7 +2,7 @@
  * /evaluation/exams/:id: one exam (backend ADR-0035): where it applies, its subjects with
  * maximum and pass marks, and every section taking part with its students and how many marks are
  * in. From here: enter a section's marks, upload a CSV of marks, see results, lock / unlock.
- * Upload records of this exam are listed at the bottom. Part 2 (ADR-0036): the chapters each
+ * Upload records of this exam are listed at the bottom. Part 2 (ADR-0037): the chapters each
  * subject covers, the grades used (changeable), the overview and the report cards (one PDF for the
  * exam or per section).
  */

@@ -1,5 +1,5 @@
 /**
- * /evaluation/grading/:id: change a grading scheme's name or grades (backend ADR-0036). Results
+ * /evaluation/grading/:id: change a grading scheme's name or grades (backend ADR-0037). Results
  * and report cards of every exam that uses it show the new grades.
  */
 import { Card, CardContent, PageHeader } from '@eduplatform/ui';

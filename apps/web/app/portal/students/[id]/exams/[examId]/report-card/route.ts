@@ -1,6 +1,6 @@
 /**
  * /portal/students/:id/exams/:examId/report-card: a parent's or student's report card PDF for a
- * LOCKED exam (backend ADR-0036). The API checks the student is theirs.
+ * LOCKED exam (backend ADR-0037). The API checks the student is theirs.
  */
 import { apiDownload } from '../../../../../../../lib/api';
 

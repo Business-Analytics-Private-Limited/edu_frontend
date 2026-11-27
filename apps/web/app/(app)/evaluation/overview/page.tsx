@@ -1,5 +1,5 @@
 /**
- * /evaluation/overview?academicYearId=: the year at a glance (backend ADR-0036): every exam of
+ * /evaluation/overview?academicYearId=: the year at a glance (backend ADR-0037): every exam of
  * the year with its students, pass % and average, over the students the user may see. Each row
  * opens that exam's own overview.
  */

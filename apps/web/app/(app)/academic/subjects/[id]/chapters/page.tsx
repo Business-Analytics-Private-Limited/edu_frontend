@@ -1,5 +1,5 @@
 /**
- * /academic/subjects/:id/chapters: a subject's syllabus (backend ADR-0036), the chapters in
+ * /academic/subjects/:id/chapters: a subject's syllabus (backend ADR-0037), the chapters in
  * teaching order. A new exam ticks the chapters it covers per subject. A chapter an exam uses
  * can't be deleted, only marked "not in use" (then it is no longer offered for new exams).
  */

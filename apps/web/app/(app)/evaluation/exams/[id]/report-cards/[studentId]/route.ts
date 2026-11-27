@@ -1,4 +1,4 @@
-/** /evaluation/exams/:id/report-cards/:studentId: one student's report card PDF (ADR-0036). */
+/** /evaluation/exams/:id/report-cards/:studentId: one student's report card PDF (ADR-0037). */
 import { apiDownload } from '../../../../../../../lib/api';
 
 export async function GET(

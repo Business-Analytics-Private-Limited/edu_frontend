@@ -2,7 +2,7 @@
  * /portal/students/:id : one child's (or the student's own) details and attendance of the last
  * 30 days: the percentage, the counts, and every day that wasn't "present" with the remark.
  * Only students linked to the login can be opened (the API answers 404 for any other).
- * With the Evaluation module, the results of LOCKED exams too (ADR-0036), each opening its page.
+ * With the Evaluation module, the results of LOCKED exams too (ADR-0037), each opening its page.
  */
 import { Badge, Card, CardContent, CardHeader, CardTitle, PageHeader } from '@eduplatform/ui';
 import Link from 'next/link';

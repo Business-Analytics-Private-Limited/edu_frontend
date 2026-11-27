@@ -70,7 +70,7 @@ export async function createExam(_previous: FormState, form: FormData): Promise<
       passMarks: Number(text(form, `pass_${id}`)),
       examDate: text(form, `date_${id}`),
       portion: text(form, `portion_${id}`),
-      // Ticked syllabus chapters of this subject (ADR-0036).
+      // Ticked syllabus chapters of this subject (ADR-0037).
       chapterIds: form.getAll(`chapter_${id}`).map(String),
     }));
   if (subjects.length === 0) return { error: 'Tick at least one subject' };
@@ -225,7 +225,7 @@ export async function uploadMarks(
   redirect(`/evaluation/uploads/${result.upload.id}`);
 }
 
-// --- Part 2 (ADR-0036): grades, report cards ----------------------------------------------------
+// --- Part 2 (ADR-0037): grades, report cards ----------------------------------------------------
 
 /** The grades an exam uses: a scheme id, or "" for the organization's default. */
 export async function setExamScheme(

@@ -1,6 +1,6 @@
 /**
  * /portal/students/:id/exams/:examId: a parent's or student's view of one LOCKED exam (backend
- * ADR-0036): the marks and grade per subject, total, percentage, result, grade, GPA and rank in
+ * ADR-0037): the marks and grade per subject, total, percentage, result, grade, GPA and rank in
  * the section, and the report card PDF.
  */
 import {
